@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "comentario.schema.json",
+  "title": "Comentario",
+  "description": "Comentario persistido al pie de una publicación. `id` y `fecha_creacion` los asigna la capa de persistencia.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "publicacion_id", "autor", "contenido", "fecha_creacion"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid", "description": "Identificador único (UUID v4)." },
+    "publicacion_id": { "type": "string", "format": "uuid", "description": "Publicación a la que pertenece el comentario." },
+    "autor": { "type": "string", "minLength": 1, "maxLength": 120, "default": "Anónimo", "description": "Nombre del autor. Si se omite o viene vacío se guarda \"Anónimo\"." },
+    "contenido": { "type": "string", "minLength": 1, "maxLength": 2000, "pattern": "^\\S(?:[\\s\\S]*\\S)?$", "description": "Texto del comentario, sin espacios al inicio ni al final." },
+    "fecha_creacion": { "type": "string", "format": "date-time", "description": "Fecha y hora de creación (ISO 8601, UTC)." }
+  },
+  "examples": [
+    {
+      "id": "9a1b2c3d-4e5f-4a6b-8c7d-0e1f2a3b4c5d",
+      "publicacion_id": "7d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e5f",
+      "autor": "Anónimo",
+      "contenido": "Excelente nota, muy clara.",
+      "fecha_creacion": "2026-09-30T18:05:00.000Z"
+    }
+  ]
+}

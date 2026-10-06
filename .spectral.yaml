@@ -1,0 +1,39 @@
+# Gobernanza del contrato (Fase 2 de la guía SDD)
+extends: ["spectral:oas"]
+rules:
+  # Los operationId son la interfaz de la UI: deben ser camelCase.
+  operation-id-camel-case:
+    description: operationId en camelCase (ej. createColaborador).
+    severity: error
+    given: "$.paths[*][get,post,put,patch,delete].operationId"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^[a-z][a-zA-Z0-9]*$"
+  # Los campos del modelo de datos usan snake_case, como en la especificación.
+  propiedades-snake-case:
+    description: Propiedades de esquemas en snake_case.
+    severity: error
+    given: "$..properties[*]~"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^[a-z][a-z0-9_]*$"
+  # Toda operación que recibe datos debe declarar su error de validación.
+  post-con-error-400:
+    description: Toda operación POST debe declarar la respuesta 400.
+    severity: error
+    given: "$.paths[*].post.responses"
+    then:
+      field: "400"
+      function: truthy
+  # Toda operación debe documentar su propósito.
+  operacion-con-descripcion:
+    description: Toda operación necesita summary y description.
+    severity: error
+    given: "$.paths[*][get,post,put,patch,delete]"
+    then:
+      - field: summary
+        function: truthy
+      - field: description
+        function: truthy

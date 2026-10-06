@@ -1,0 +1,6 @@
+# Finales de línea uniformes (LF) aunque se edite en Windows: evita cambios "fantasma".
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary

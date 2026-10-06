@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "comentario.input.schema.json",
+  "title": "ComentarioInput",
+  "description": "Datos que envía el formulario de comentarios. `autor` es opcional; vacío o solo espacios equivale a omitirlo.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contenido"],
+  "properties": {
+    "autor": { "type": "string", "maxLength": 120, "description": "Nombre opcional del autor." },
+    "contenido": { "$ref": "comentario.schema.json#/properties/contenido" }
+  },
+  "examples": [
+    { "contenido": "Excelente nota, muy clara." }
+  ]
+}

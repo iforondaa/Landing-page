@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "colaborador.input.schema.json",
+  "title": "ColaboradorInput",
+  "description": "Datos que envía el formulario \"Quiero colaborar\". Antes de validar, la capa de datos recorta espacios y omite los campos opcionales vacíos.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "nombre_completo",
+    "email"
+  ],
+  "properties": {
+    "nombre_completo": {
+      "$ref": "colaborador.schema.json#/properties/nombre_completo"
+    },
+    "email": {
+      "$ref": "colaborador.schema.json#/properties/email"
+    },
+    "telefono": {
+      "$ref": "colaborador.schema.json#/properties/telefono"
+    },
+    "area_adscripcion": {
+      "$ref": "colaborador.schema.json#/properties/area_adscripcion"
+    },
+    "comentario_propuesta": {
+      "$ref": "colaborador.schema.json#/properties/comentario_propuesta"
+    }
+  },
+  "examples": [
+    {
+      "nombre_completo": "Antonio Machado Ruiz",
+      "email": "ejemplo@banobras.gob.mx"
+    }
+  ]
+}

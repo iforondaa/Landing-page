@@ -1,0 +1,12 @@
+# Dependencias y resultados de pruebas (se regeneran)
+node_modules/
+test-results/
+playwright-report/
+
+# Archivos que la app de Claude deja en la carpeta (capturas y ejemplos enviados en el chat)
+Claude outputs/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini

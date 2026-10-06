@@ -1,0 +1,65 @@
+/*
+ * Tokens de diseño. Paleta rosa (en ajuste): cambiar los colores SOLO aquí.
+ * Contrastes verificados (WCAG AA ≥ 4.5:1): blanco sobre primario 5.3:1 · primario sobre blanco 5.3:1
+ * · primario-oscuro sobre blanco 8.4:1 · primario-oscuro sobre primario-suave 7.3:1.
+ */
+:root {
+  /* Color */
+  --color-primario: #b83c74;        /* rosa: botones, enlaces, acentos */
+  --color-primario-oscuro: #8a2752; /* rosa oscuro: títulos, hover, pie de página */
+  --color-primario-suave: #fbeaf1;  /* rosa muy claro: fondos de etiquetas y avatares */
+  --color-acento: #e58fb3;          /* rosa claro: solo decorativo (no para texto) */
+  --color-acento-claro: #f7d6e4;
+  --color-decorativo: rgb(247 214 228 / 40%); /* círculos del fondo de portada */
+  --color-texto: #1f2328;
+  --color-texto-suave: #545b64;
+  --color-fondo: #ffffff;
+  --color-fondo-alt: #faf5f7;
+  --color-borde: #e6dce1;
+  --color-sobre-primario: #ffffff;
+  --color-foco: #1a4fd6;
+  --color-borde-control: #767b84;   /* bordes de campos: ≥ 3:1 sobre blanco */
+  --color-placeholder: #686d76;     /* texto de ejemplo: ≥ 4.5:1 sobre blanco */
+  --color-error: #b42318;
+  --color-error-fondo: #fef3f2;
+  --color-exito: #146c43;
+  --color-exito-fondo: #edf7f1;
+
+  /* Tipografía */
+  --fuente-base: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  --fuente-titulos: var(--fuente-base);
+  --texto-xs: 0.8125rem;
+  --texto-sm: 0.9375rem;
+  --texto-base: 1.0625rem;
+  --texto-lg: clamp(1.125rem, 1rem + 0.5vw, 1.3125rem);
+  --texto-xl: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+  --texto-2xl: clamp(1.875rem, 1.3rem + 2.4vw, 3rem);
+  --interlineado: 1.6;
+  --interlineado-titulos: 1.15;
+
+  /* Espaciado */
+  --esp-1: 0.25rem;
+  --esp-2: 0.5rem;
+  --esp-3: 0.75rem;
+  --esp-4: 1rem;
+  --esp-5: 1.5rem;
+  --esp-6: 2rem;
+  --esp-7: 3rem;
+  --esp-8: clamp(3rem, 2rem + 4vw, 5.5rem);
+
+  /* Formas y capas */
+  --radio-sm: 6px;
+  --radio: 14px;
+  --sombra: 0 1px 2px rgb(31 35 40 / 6%), 0 8px 24px rgb(31 35 40 / 8%);
+  --sombra-hover: 0 2px 4px rgb(31 35 40 / 8%), 0 14px 36px rgb(31 35 40 / 14%);
+  --transicion: 180ms ease;
+
+  /* Diseño */
+  --ancho-max: 72rem;
+  --margen-lateral: 1rem;
+  --alto-encabezado: 5.25rem; /* incluye el lema en dos renglones */
+}
+
+@media (min-width: 48rem) {
+  :root { --margen-lateral: 2rem; }
+}

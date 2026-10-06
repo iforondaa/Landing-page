@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "colaborador.schema.json",
+  "title": "Colaborador",
+  "description": "Registro persistido de una persona que desea colaborar. `id` y `fecha_registro` los asigna la capa de persistencia.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "nombre_completo",
+    "email",
+    "fecha_registro"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Identificador único (UUID v4)."
+    },
+    "nombre_completo": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 120,
+      "pattern": "^\\S(?:.*\\S)?$",
+      "description": "Nombre completo, sin espacios al inicio ni al final."
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "maxLength": 254,
+      "description": "Correo electrónico. Se acepta cualquier dominio."
+    },
+    "telefono": {
+      "type": "string",
+      "pattern": "^\\d(?:-?\\d){9}$",
+      "description": "Teléfono de 10 dígitos; admite guiones entre dígitos en cualquier posición (ej. 5543650920, 55-4365-0920, 554-365-0920)."
+    },
+    "area_adscripcion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "description": "Área de adscripción."
+    },
+    "comentario_propuesta": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "description": "Comentario o propuesta opcional de la persona."
+    },
+    "fecha_registro": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de registro (ISO 8601, UTC)."
+    }
+  },
+  "examples": [
+    {
+      "id": "3f6c2a1e-8b4d-4c2a-9e1f-5a7b8c9d0e1f",
+      "nombre_completo": "Antonio Machado Ruiz",
+      "email": "ejemplo@banobras.gob.mx",
+      "telefono": "55-4365-0920",
+      "area_adscripcion": "Dirección de Crédito",
+      "comentario_propuesta": "Propongo organizar pláticas sobre prestaciones laborales.",
+      "fecha_registro": "2026-09-30T18:00:00.000Z"
+    }
+  ]
+}

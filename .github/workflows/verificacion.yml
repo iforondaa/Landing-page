@@ -1,0 +1,51 @@
+# Verificación automática (Fase 5 de la guía SDD): en cada cambio se revisan
+# el contrato, la sincronía contrato ↔ código, las pruebas unitarias y las de aceptación.
+name: Verificación
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verificacion-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contrato-y-unitarias:
+    name: Contrato y pruebas unitarias
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint del contrato + sincronía de esquemas + pruebas unitarias
+        run: npm run verify
+
+  aceptacion:
+    name: Pruebas de aceptación (escritorio y móvil)
+    runs-on: ubuntu-latest
+    needs: contrato-y-unitarias
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - name: Guardar reporte si algo falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-playwright
+          path: playwright-report/
+          retention-days: 14

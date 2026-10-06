@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manos a la obra</title>
+  <meta name="description" content="Publicaciones institucionales y registro de colaboradores.">
+  <meta name="theme-color" content="#8a2752">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%238a2752'/%3E%3Cpath d='M10 8h7a5 5 0 0 1 2.6 9.3A5 5 0 0 1 17 25h-7z' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <header class="encabezado">
+    <a class="saltar" href="#/" data-saltar>Saltar al contenido</a>
+    <div class="contenedor encabezado__fila">
+      <!-- Nombre y lema: se editan en js/identidad.js (este texto es solo respaldo y debe coincidir). -->
+      <a class="marca" href="#/" aria-label="Manos a la obra, ir al inicio">
+        <span class="marca__nombre" data-identidad="nombre">Manos a la obra</span>
+        <span class="marca__sub" data-identidad="lema">Información · diálogo · participación</span>
+      </a>
+      <nav class="nav" aria-label="Principal">
+        <ul class="nav__lista">
+          <li><a class="nav__enlace" href="#/publicaciones" data-nav="publicaciones">Publicaciones</a></li>
+          <li><a class="nav__enlace nav__enlace--cta" href="#/colaborar" data-nav="colaborar">Quiero colaborar</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenido" class="principal" tabindex="-1">
+    <noscript>
+      <div class="contenedor estado"><p>Este sitio necesita JavaScript para mostrar las publicaciones.</p></div>
+    </noscript>
+  </main>
+
+  <footer class="pie">
+    <div class="contenedor pie__fila">
+      <p><span data-identidad="nombre">Manos a la obra</span> · <span data-identidad="lema">Información · diálogo · participación</span></p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,69 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: var(--esp-4);
+}
+@media (min-width: 40rem) {
+  html { scroll-padding-top: calc(var(--alto-encabezado) + var(--esp-4)); }
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--fuente-base);
+  font-size: var(--texto-base);
+  line-height: var(--interlineado);
+  color: var(--color-texto);
+  background: var(--color-fondo);
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3 {
+  font-family: var(--fuente-titulos);
+  line-height: var(--interlineado-titulos);
+  margin: 0;
+  text-wrap: balance;
+}
+
+p { margin: 0; }
+p + p { margin-top: var(--esp-4); }
+
+img { display: block; max-width: 100%; height: auto; }
+
+a { color: var(--color-primario); text-underline-offset: 0.18em; }
+a:hover { color: var(--color-primario-oscuro); }
+
+:focus-visible {
+  outline: 3px solid var(--color-foco);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Destinos de foco no interactivos (títulos, secciones, <main>): el router los enfoca para lectores
+   de pantalla; no necesitan contorno porque no se pueden activar. */
+[tabindex="-1"]:focus { outline: none; }
+
+.contenedor {
+  width: min(100% - 2 * var(--margen-lateral), var(--ancho-max));
+  margin-inline: auto;
+}
+
+.visualmente-oculto {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0);
+  white-space: nowrap; border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

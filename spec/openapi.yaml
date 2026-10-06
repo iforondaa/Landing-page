@@ -1,0 +1,187 @@
+openapi: 3.1.0
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+info:
+  title: Landing de Publicaciones y Colaboradores — Capa de datos
+  version: 1.1.0 # 1.1.0: campo opcional comentario_propuesta; teléfono admite guiones en cualquier posición (cambios compatibles)
+  summary: Contrato de la capa de datos de la landing (V1 simulada con LocalStorage).
+  description: |
+    Fuente única de verdad de las operaciones de datos de la landing.
+    En V1 el "servidor" es un adaptador de LocalStorage que implementa estas
+    operaciones con los mismos `operationId`, cuerpos y respuestas. En V2 se
+    sustituye por un backend HTTP real sin cambiar la interfaz.
+
+    Reglas transversales:
+    - `id` (UUID v4) y las marcas de tiempo (ISO 8601, UTC) las asigna la capa de datos.
+    - Antes de validar se recortan espacios y se omiten los opcionales vacíos.
+    - `Comentario.autor` vacío u omitido se guarda como "Anónimo".
+  contact:
+    name: Equipo del proyecto Landing
+  license:
+    name: Uso interno
+    identifier: LicenseRef-Uso-Interno
+servers:
+  - url: /api
+    description: Mock V1 (adaptador LocalStorage en el navegador)
+tags:
+  - name: Publicaciones
+    description: Lectura de publicaciones institucionales.
+  - name: Comentarios
+    description: Comentarios al pie de cada publicación.
+  - name: Colaboradores
+    description: Registro y exportación de colaboradores.
+paths:
+  /publicaciones:
+    get:
+      operationId: listPublicaciones
+      tags: [Publicaciones]
+      summary: Listar publicaciones
+      description: Devuelve las publicaciones ordenadas de la más reciente a la más antigua. Exactamente una tiene `es_principal = true`.
+      responses:
+        '200':
+          description: Lista de publicaciones.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: './schemas/publicacion.schema.json'
+        '500':
+          $ref: '#/components/responses/ErrorAlmacenamiento'
+  /publicaciones/{publicacion_id}:
+    parameters:
+      - $ref: '#/components/parameters/PublicacionId'
+    get:
+      operationId: getPublicacion
+      tags: [Publicaciones]
+      summary: Obtener una publicación
+      description: Devuelve la publicación para la vista de lectura.
+      responses:
+        '200':
+          description: Publicación encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/publicacion.schema.json'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorAlmacenamiento'
+  /publicaciones/{publicacion_id}/comentarios:
+    parameters:
+      - $ref: '#/components/parameters/PublicacionId'
+    get:
+      operationId: listComentarios
+      tags: [Comentarios]
+      summary: Listar comentarios de una publicación
+      description: Devuelve los comentarios en orden cronológico ascendente (el más antiguo primero).
+      responses:
+        '200':
+          description: Lista de comentarios (puede estar vacía).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: './schemas/comentario.schema.json'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorAlmacenamiento'
+    post:
+      operationId: createComentario
+      tags: [Comentarios]
+      summary: Publicar un comentario
+      description: Guarda el comentario y lo devuelve listo para mostrarse al instante. Si `autor` se omite o queda vacío, se guarda "Anónimo" (Escenario BDD 2).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/comentario.input.schema.json'
+      responses:
+        '201':
+          description: Comentario creado.
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/comentario.schema.json'
+        '400':
+          $ref: '#/components/responses/ErrorValidacion'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorAlmacenamiento'
+  /colaboradores:
+    get:
+      operationId: listColaboradores
+      tags: [Colaboradores]
+      summary: Listar colaboradores
+      description: Devuelve todos los registros, del más reciente al más antiguo. Alimenta la vista de consulta y la descarga CSV.
+      responses:
+        '200':
+          description: Lista de colaboradores.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: './schemas/colaborador.schema.json'
+        '500':
+          $ref: '#/components/responses/ErrorAlmacenamiento'
+    post:
+      operationId: createColaborador
+      tags: [Colaboradores]
+      summary: Registrar un colaborador
+      description: Valida y guarda el registro del formulario "Quiero colaborar" (Escenario BDD 1).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/colaborador.input.schema.json'
+      responses:
+        '201':
+          description: Colaborador registrado.
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/colaborador.schema.json'
+        '400':
+          $ref: '#/components/responses/ErrorValidacion'
+        '500':
+          $ref: '#/components/responses/ErrorAlmacenamiento'
+components:
+  parameters:
+    PublicacionId:
+      name: publicacion_id
+      in: path
+      required: true
+      description: Identificador de la publicación.
+      schema:
+        type: string
+        format: uuid
+  responses:
+    ErrorValidacion:
+      description: Los datos no cumplen el esquema.
+      content:
+        application/json:
+          schema:
+            $ref: './schemas/error.schema.json'
+    NoEncontrado:
+      description: La publicación no existe.
+      content:
+        application/json:
+          schema:
+            $ref: './schemas/error.schema.json'
+          example:
+            codigo: NO_ENCONTRADO
+            mensaje: La publicación solicitada no existe.
+    ErrorAlmacenamiento:
+      description: No fue posible leer o escribir en el almacenamiento (p. ej. LocalStorage lleno o bloqueado).
+      content:
+        application/json:
+          schema:
+            $ref: './schemas/error.schema.json'
+          example:
+            codigo: ALMACENAMIENTO
+            mensaje: No se pudo guardar la información. Intenta de nuevo.
