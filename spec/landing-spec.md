@@ -1,6 +1,6 @@
 # Especificación de Producto: «Manos a la obra» — Landing de Publicaciones y Colaboradores (base sindicalizada de Banobras)
 
-> **Versión:** 1.2 · **Fecha:** 2026-10-05 · Ver decisiones en la sección 7 (ajustes de la v1.2 en §7.1) y el plan técnico en `spec/plan.md`.
+> **Versión:** 1.4 · **Fecha:** 2026-10-16 · Ver decisiones en la sección 7 (v1.2 en §7.1; nota real y carátula de la v1.3 en §7.2; contenido definitivo, retiro del aviso de privacidad e identidad definitiva de la v1.4 en §7.3) y el plan técnico en `spec/plan.md`.
 
 ## 1. Visión General y Alcance (Specify)
 Desarrollo de un sitio web de una sola página (Landing Page) enfocado en la lectura de publicaciones y en el registro de colaboradores, dirigido a las trabajadoras y los trabajadores sindicalizados de Banobras.
@@ -15,6 +15,7 @@ Desarrollo de un sitio web de una sola página (Landing Page) enfocado en la lec
 
 ### 2.2 Lectura de Publicaciones y Comentarios
 - Al hacer clic en la publicación principal (o futuras publicaciones), la nota se abrirá en una vista dedicada para su lectura.
+- *(v1.3)* La nota se lee de arriba abajo así: **imagen de portada** (con texto alternativo) → **carátula** "de un vistazo" (cifras clave, gráficas, un dato destacado y una cita) → **informe completo** (secciones, párrafos, listas, citas y gráficas). Ver §7.2.
 - Al final de la nota, se incluye un formulario de comentarios:
   - `nombre_autor`: Campo de texto opcional (si se omite, se asigna automáticamente "Anónimo").
   - `texto_comentario`: Campo de texto obligatorio.
@@ -44,10 +45,14 @@ Desarrollo de un sitio web de una sola página (Landing Page) enfocado en la lec
   - `id`: String / UUID (Requerido)
   - `titulo`: String (Requerido, máx. 200)
   - `resumen`: String (Requerido, máx. 400)
-  - `cuerpo`: Text (Requerido)
+  - `antetitulo`: String (Opcional) *(v1.3)*
+  - `cuerpo`: Text (Opcional desde v1.3; se exige `cuerpo` **o** `contenido`)
+  - `caratula`: Objeto (Opcional) *(v1.3)* — título, subtítulo, cifras, gráficas, destacado, cita y nota metodológica.
+  - `contenido`: Lista de bloques (Opcional) *(v1.3)* — `seccion`, `subseccion`, `parrafo`, `lista`, `citas`, `grafica`; el texto admite **negritas** con `**…**`.
   - `autor`: String (Requerido, máx. 120)
   - `fecha_publicacion`: Timestamp (Requerido)
   - `imagen_url`: String / URI (Opcional)
+  - `imagen_alt`: String (Requerido si hay `imagen_url`) *(v1.3)*
   - `es_principal`: Boolean (Requerido; solo una a la vez)
 
 - **Entidad `Comentario`**:
@@ -101,3 +106,16 @@ Desarrollo de un sitio web de una sola página (Landing Page) enfocado en la lec
 4. **Paleta rosa** (sustituye al guinda): primario `#B83C74`, oscuro `#8A2752`, suave `#FBEAF1`; todos los textos cumplen contraste WCAG AA. Se seguirá puliendo; los colores se cambian solo en `src/css/tokens.css`.
 5. **Identidad provisional**: nombre y lema (ver §2.1). *v1.2.1 (2026-10-05): "Faro Laboral" y su lema se sustituyen por "EL PULSO DE LA BASE SINDICALIZADA DE BANOBRAS" / "Información · diálogo · participación". v1.2.2: el nombre cambia a "MANOS A LA OBRA"; el lema se conserva.* Puede cambiar; se edita solo en `src/js/identidad.js` (una prueba verifica que `index.html` coincida).
 
+### 7.2 Nota real, carátula y aviso de privacidad (v1.3 · 2026-10-10)
+1. **Primera nota real**: «El Sindicato visto por su base», con los resultados de la consulta a trabajadoras y trabajadores sindicalizados (96 respuestas). Sustituye a las publicaciones de ejemplo.
+2. **Carátula**: se toma del "Resumen ejecutivo" para que quien abra el enlace vea lo esencial de un vistazo. Debajo va el "Informe de análisis ejecutivo" completo.
+3. **Imagen de portada**: la gráfica de dona "¿Qué tan presente has sentido al Sindicato?", rediseñada con la paleta del sitio (`src/assets/img/consulta-portada.svg`) y con texto alternativo que da las cifras.
+4. **Gráficas**: se dibujan con HTML/SVG a partir de los datos del contrato (barras, barras agrupadas, apilada, dona); el texto de cada valor es visible, no solo el color. Paleta validada para daltonismo (ver `tokens.css`).
+5. ~~**Aviso de privacidad**~~ *(retirado en la v1.4, ver §7.3)* genérico en `#/aviso-de-privacidad`, enlazado desde el pie, el formulario y los comentarios. Aclara que el sitio **no es oficial** de Banobras ni del Gobierno de México. Por tratar datos que pueden revelar afiliación sindical u opiniones (datos sensibles en la LFPDPPP 2025), el registro exige **consentimiento expreso** (casilla). Pendiente: correo de contacto y revisión legal antes de publicar.
+6. **Contrato** `openapi.yaml` 1.1.0 → **2.0.0** (cambio incompatible: `cuerpo` deja de ser obligatorio).
+
+### 7.3 Contenido definitivo, sin aviso de privacidad e identidad definitiva (v1.4 · 2026-10-16)
+1. **Cifras definitivas**: la nota usa los documentos «…_revision_consistencia.docx» de la carpeta «versión definitiva» (fuera del repositorio, en `.gitignore`). Se corrigen 89%/11%, «17 de 96» personas que sí conocen un caso resuelto (carátula), frente a 79 que no respondieron o no conocen ninguno (informe) y la prioridad del Comité Ejecutivo Nacional en porcentaje (33/15/12/10/8%, n=84), entre otros.
+2. **Aviso de privacidad retirado por ahora**: sin página, sin enlaces y sin casilla obligatoria en el formulario; `Colaborador` vuelve a sus campos de la v1.2. El texto se conserva como borrador en `spec/borradores/aviso-privacidad.md` por si se reactiva (requeriría revisión legal y consentimiento expreso).
+3. **Pie de página**: «Iniciativa de trabajadoras y trabajadores sindicalizados de Banobras. No es un sitio oficial de Banobras, del Gobierno de México ni del Sindicato Único Nacional de Trabajadores de Banobras.»
+4. **Identidad definitiva**: nombre «El Banobrino» (se muestra en mayúsculas) y lema «Acercando el Sindicato a las y los trabajadores».

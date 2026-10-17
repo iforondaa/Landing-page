@@ -1,10 +1,20 @@
-/** Vista de lectura de una publicación (Tarea 2) con sus comentarios al pie. */
+/**
+ * Vista de lectura de una publicación (Tarea 2): cabecera, imagen de portada, carátula
+ * («de un vistazo»), contenido completo y comentarios al pie.
+ */
 import { h } from '../lib/dom.js';
 import { formatearFecha, enParrafos } from '../lib/formato.js';
 import { ApiError } from '../data/api.js';
 import { mediaPublicacion } from '../components/hero-publicacion.js';
+import { caratula } from '../components/caratula.js';
+import { bloques } from '../components/bloques.js';
 import { seccionComentarios } from '../components/comentarios.js';
 import { vistaNoEncontrada } from './estado.view.js';
+
+function contenidoDe(publicacion) {
+  if (publicacion.contenido?.length) return bloques(publicacion.contenido);
+  return enParrafos(publicacion.cuerpo ?? '').map((p) => h('p', { class: 'bloque-parrafo' }, p));
+}
 
 export async function vistaPublicacion({ api, params }) {
   let publicacion;
@@ -28,7 +38,7 @@ export async function vistaPublicacion({ api, params }) {
         h('a', { href: '#/publicaciones', class: 'enlace-volver' }, h('span', { 'aria-hidden': 'true' }, '← '), 'Volver a publicaciones')),
       h('article', { class: 'nota', 'aria-labelledby': 'titulo-nota' },
         h('header', { class: 'nota__cabecera' },
-          publicacion.es_principal ? h('p', { class: 'etiqueta' }, 'Publicación principal') : null,
+          publicacion.antetitulo ? h('p', { class: 'etiqueta' }, publicacion.antetitulo) : null,
           h('h1', { class: 'nota__titulo', id: 'titulo-nota' }, publicacion.titulo),
           h('p', { class: 'nota__resumen' }, publicacion.resumen),
           h('p', { class: 'meta' },
@@ -36,7 +46,10 @@ export async function vistaPublicacion({ api, params }) {
             h('span', { class: 'meta__sep', 'aria-hidden': 'true' }, '·'),
             h('time', { datetime: publicacion.fecha_publicacion }, formatearFecha(publicacion.fecha_publicacion)))),
         mediaPublicacion(publicacion, 'nota__media'),
-        h('div', { class: 'nota__cuerpo' }, enParrafos(publicacion.cuerpo).map((p) => h('p', {}, p)))),
+        publicacion.caratula ? caratula(publicacion.caratula) : null,
+        h('div', { class: 'nota__cuerpo' },
+          publicacion.caratula && publicacion.contenido?.length ? h('p', { class: 'antetitulo nota__separador' }, 'Informe completo') : null,
+          contenidoDe(publicacion))),
       comentarios));
 
   return { nodo, titulo: publicacion.titulo };

@@ -97,7 +97,7 @@ describe('Mensajes para el usuario', () => {
   });
 
   it('falla de forma explícita ante palabras clave no soportadas', () => {
-    const v = crearValidador({ 'x.json': { $id: 'x.json', type: 'number', minimum: 1 } });
+    const v = crearValidador({ 'x.json': { $id: 'x.json', oneOf: [{ type: 'number' }] } });
     expect(() => v('x.json', 0)).toThrow(/no soportada/);
   });
 });

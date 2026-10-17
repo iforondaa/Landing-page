@@ -1,6 +1,6 @@
 # Plan Técnico (Plan Phase) — Landing Page de Publicaciones y Colaboradores Banobras
 
-> **Versión:** 1.9 · **Fecha:** 2026-10-05 · **Estado:** V1 (prototipo) completada, verificada y ajustada (spec v1.2) — ver `spec/verificacion.md`
+> **Versión:** 1.12 · **Fecha:** 2026-10-16 · **Estado:** V1 (prototipo) con la nota definitiva e identidad «El Banobrino» (spec v1.4) — ver `spec/verificacion.md`
 > **Documentos relacionados:** `spec/landing-spec.md` (Specify) · `spec/openapi.yaml` (contrato) · `spec/schemas/` (esquemas)
 > **Metodología de referencia:** Guía Maestra de Implementación — Desarrollo Basado en Especificaciones (SDD)
 
@@ -47,9 +47,11 @@ Justificación: dos vistas y dos formularios no justifican el costo de React (bu
 ```
 Landing page/
 ├── spec/                             ← Fuente única de verdad
-│   ├── landing-spec.md               (Specify, v1.1 con decisiones cerradas)
+│   ├── landing-spec.md               (Specify, v1.4 con decisiones cerradas)
 │   ├── plan.md                       (este documento)
-│   ├── openapi.yaml                  (contrato de operaciones)
+│   ├── openapi.yaml                  (contrato de operaciones, 2.0.0)
+│   ├── verificacion.md               (resultados de verificación)
+│   ├── borradores/aviso-privacidad.md (en reserva; no se publica)
 │   └── schemas/
 │       ├── colaborador.schema.json
 │       ├── comentario.schema.json
@@ -75,6 +77,9 @@ Landing page/
 │   │   ├── components/
 │   │   │   ├── header.js
 │   │   │   ├── hero-publicacion.js   (tarjeta principal + imagen con respaldo)
+│   │   │   ├── caratula.js           (resumen "de un vistazo" de la nota)
+│   │   │   ├── bloques.js            (secciones, párrafos, listas, citas del informe)
+│   │   │   ├── grafica.js            (barras, barras agrupadas, apilada, dona)
 │   │   │   ├── colaborar-form.js
 │   │   │   └── comentarios.js
 │   │   ├── contract/
@@ -88,9 +93,10 @@ Landing page/
 │   │       ├── dom.js                (creación segura de elementos, sin innerHTML)
 │   │       ├── formato.js            (fecha, fecha y hora es-MX, párrafos)
 │   │       ├── normalizar.js         (recorte y omisión de opcionales: compartido UI ↔ datos)
+│   │       ├── texto.js              (negritas **…** sin innerHTML)
 │   │       ├── validator.js          (valida contra spec/schemas)
 │   │       └── csv.js                (serialización y descarga CSV)
-│   └── assets/img/                   (se crea al colocar la imagen real de portada)
+│   └── assets/img/consulta-portada.svg (imagen de la nota)
 ├── scripts/
 │   └── gen-schemas.mjs               (spec/schemas → schemas.generated.js)
 ├── tests/
@@ -104,7 +110,9 @@ Landing page/
 │   ├── comentarios.spec.js           (Escenario BDD 2: lectura y comentarios)
 │   ├── csv.test.js                   (formato CSV, comillas, inyección de fórmulas)
 │   ├── exportar.spec.js              (consulta y descarga CSV)
-│   └── identidad.spec.js             (nombre, lema, texto y paleta — ajustes v1.2)
+│   ├── identidad.spec.js             (nombre, lema, texto y paleta — ajustes v1.2)
+│   ├── texto.test.js                 (negritas)
+│   └── nota.spec.js                  (carátula, informe y gráficas — v1.3/v1.4)
 ├── .spectral.yaml
 ├── playwright.config.js              (escritorio + móvil)
 ├── vitest.config.js
@@ -193,7 +201,7 @@ La Tarea 4 (persistencia) es dependencia de las Tareas 2 y 3, por lo que se adel
 ## 8. Fuera de alcance en V1 (se mantienen los Non-Goals)
 
 - Autenticación / inicio de sesión (la vista de exportación no está protegida).
-  - **Condición para salir de prototipo (V2):** backend con base de datos (sustituir `localstorage.adapter.js` por un adaptador HTTP con la misma interfaz), autenticación del lado del servidor para `listColaboradores` y la descarga CSV, y aviso de privacidad en el formulario. Una contraseña validada solo en el navegador no es aceptable.
+  - **Condición para salir de prototipo (V2):** backend con base de datos (sustituir `localstorage.adapter.js` por un adaptador HTTP con la misma interfaz), autenticación del lado del servidor para `listColaboradores` y la descarga CSV, y aviso de privacidad con revisión legal (borrador en `spec/borradores/`). Una contraseña validada solo en el navegador no es aceptable.
 - CMS externo o WordPress.
 - Pagos o procesamiento financiero.
 - Generación de SDKs, portales de documentación y servidores MCP (fases 4–5 completas de la guía).
@@ -215,3 +223,5 @@ La Tarea 4 (persistencia) es dependencia de las Tareas 2 y 3, por lo que se adel
 | 1.9.1 | 2026-10-05 | Identidad: "El pulso de la base sindicalizada de Banobras" (nombre en mayúsculas) con el lema "Información · diálogo · participación". Solo cambió `identidad.js`, su respaldo en `index.html` y el estilo de la marca. |
 | 1.9.2 | 2026-10-05 | Identidad: nombre "Manos a la obra" (en mayúsculas, tamaño mayor por ser corto); se conserva el lema. |
 | 1.10 | 2026-10-06 | Control de versiones: repositorio Git (rama `main`), `.gitattributes` (LF), `.gitignore`, `package-lock.json` y verificación automática en GitHub Actions (Fase 5 de la guía SDD). Repositorio privado en GitHub, publicado con GitHub Desktop. |
+| 1.11 | 2026-10-10 | Primera nota real (spec v1.3 §7.2): carátula tomada del Resumen ejecutivo + Informe completo como bloques; 12 gráficas HTML/SVG con paleta validada para daltonismo; imagen de portada SVG con texto alternativo. Aviso de privacidad genérico (`#/aviso-de-privacidad`) y consentimiento expreso obligatorio en el registro (datos sensibles, LFPDPPP 2025). Contrato 2.0.0. Corregido: la casilla heredaba `width:100%` y ensanchaba la página en móvil; las pruebas de desbordamiento ahora usan `clientWidth`. 3,038 unitarias + 112 de aceptación en verde; 28 combinaciones ruta × ancho sin fallas. |
+| 1.12 | 2026-10-16 | Spec v1.4 §7.3: cifras definitivas de la versión «revision_consistencia» (carátula e informe); se retira el aviso de privacidad (página, enlaces y casilla) y `Colaborador` vuelve a sus campos de la v1.2 (texto del aviso guardado como borrador); pie con aclaración sobre el SUNTB; identidad definitiva «El Banobrino» / «Acercando el Sindicato a las y los trabajadores»; carpeta «versión definitiva» en `.gitignore`. 2,795 unitarias + 104 de aceptación en verde; 24 combinaciones ruta × ancho sin fallas. |

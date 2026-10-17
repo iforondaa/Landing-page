@@ -16,6 +16,11 @@ const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OPENAPI = fs.readFileSync(path.join(RAIZ, 'spec/openapi.yaml'), 'utf8');
 const ajv = crearAjv();
 const PRINCIPAL = publicaciones.find((p) => p.es_principal);
+/** Segunda publicación mínima (solo para pruebas) que usa `cuerpo` en lugar de `contenido`. */
+const SECUNDARIA = {
+  id: 'b4c5d6e7-f809-4a1b-9c2d-3e4f5a6b7c8d', titulo: 'Publicación secundaria de prueba', resumen: 'Resumen.',
+  cuerpo: 'Párrafo uno.\n\nPárrafo dos.', autor: 'Pruebas', fecha_publicacion: '2026-09-15T12:00:00.000Z', es_principal: false,
+};
 const ID_INEXISTENTE = '00000000-0000-4000-8000-000000000000';
 
 /** Afirma que `valor` cumple el esquema según Ajv (referencia independiente del validador propio). */
@@ -69,6 +74,30 @@ describe('Semilla de publicaciones', () => {
   it('cumple el esquema y tiene exactamente una principal', () => {
     publicaciones.forEach((p) => cumple('publicacion.schema.json', p));
     expect(publicaciones.filter((p) => p.es_principal)).toHaveLength(1);
+  });
+
+  it('reglas del contrato 2.0.0: `cuerpo` o `contenido`, e `imagen_alt` si hay imagen', () => {
+    const { contenido, ...sinContenido } = PRINCIPAL;
+    expect(() => createLocalStorageAdapter({ storage, publicaciones: [sinContenido] })).toThrow(/cuerpo.*contenido/);
+    const { imagen_alt, ...sinAlt } = PRINCIPAL;
+    expect(() => createLocalStorageAdapter({ storage, publicaciones: [sinAlt] })).toThrow(/imagen_alt/);
+    expect(() => createLocalStorageAdapter({ storage, publicaciones: [{ ...PRINCIPAL }, SECUNDARIA] })).not.toThrow();
+  });
+
+  it('cada gráfica de la semilla es coherente: un valor por serie y porcentajes ≤ 100', () => {
+    const graficas = [...(PRINCIPAL.caratula?.graficas ?? []), ...(PRINCIPAL.contenido ?? []).filter((b) => b.tipo === 'grafica').map((b) => b.grafica)];
+    expect(graficas.length).toBeGreaterThan(0);
+    for (const g of graficas) {
+      const nSeries = g.variante === 'barras-agrupadas' ? g.series.length : 1;
+      for (const d of g.datos) {
+        expect(d.valores, `${g.titulo} · ${d.etiqueta}`).toHaveLength(nSeries);
+        if ((g.unidad ?? '%') === '%') d.valores.forEach((v) => expect(v).toBeLessThanOrEqual(100));
+      }
+      if (g.variante === 'dona' || g.variante === 'apilada') {
+        const suma = g.datos.reduce((s, d) => s + d.valores[0], 0);
+        expect(Math.abs(suma - 100), `${g.titulo} suma ${suma}`).toBeLessThanOrEqual(2); // redondeo
+      }
+    }
   });
 
   it('el adaptador rechaza semillas inválidas al arrancar', () => {
@@ -208,7 +237,8 @@ describe('createComentario / listComentarios', () => {
   });
 
   it('los comentarios se filtran por publicación', async () => {
-    const otra = publicaciones.find((p) => !p.es_principal);
+    const otra = SECUNDARIA;
+    api = createLocalStorageAdapter({ storage, publicaciones: [...publicaciones, SECUNDARIA] });
     await api.createComentario(PRINCIPAL.id, { contenido: 'En la principal' });
     expect(await api.listComentarios(otra.id)).toEqual([]);
   });

@@ -63,7 +63,7 @@ test('regresión: la tabla se desplaza dentro de su caja y no ensancha la págin
   await registrar(page, 'Luis Pérez', 'luis@gmail.com');
   await page.goto('/#/admin/exportar');
   await expect(page.locator('.tabla tbody tr')).toHaveCount(2);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
 });
 
 test('revisión C3: un registro con fecha dañada no tumba la vista', async ({ page }) => {

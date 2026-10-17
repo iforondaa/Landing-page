@@ -4,7 +4,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { IDENTIDAD } from '../src/js/identidad.js';
 
 const PRINCIPAL = '7d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e5f';
-const OTRA = 'b4c5d6e7-f809-4a1b-9c2d-3e4f5a6b7c8d';
+const OTRA = 'b4c5d6e7-f809-4a1b-9c2d-3e4f5a6b7c8d'; // id de otra publicación (no existe en la semilla actual)
 const CLAVE = 'landing.v1.comentarios';
 const leer = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? '[]'), CLAVE);
 const publicar = (page) => page.getByRole('button', { name: 'Publicar comentario' }).click();
@@ -13,12 +13,12 @@ const lista = (page) => page.getByRole('list', { name: 'Comentarios publicados' 
 test.describe('Vista de lectura', () => {
   test('al hacer clic en la publicación principal se abre la nota completa', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('link', { name: /Título de la publicación principal/ }).click();
+    await page.getByRole('link', { name: 'El Sindicato visto por su base' }).click();
     await expect(page).toHaveURL(new RegExp(`#/publicacion/${PRINCIPAL}$`));
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Título de la publicación principal/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('El Sindicato visto por su base');
     await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
-    await expect(page.locator('.nota__cuerpo p')).toHaveCount(3); // los 3 párrafos de la semilla
-    await expect(page).toHaveTitle(`[Ejemplo] Título de la publicación principal · ${IDENTIDAD.nombre}`);
+    await expect(page.locator('.nota__cuerpo .bloque-seccion')).toHaveCount(8); // las 8 secciones del informe
+    await expect(page).toHaveTitle(`El Sindicato visto por su base · ${IDENTIDAD.nombre}`);
   });
 
   test('"Volver a publicaciones" regresa al inicio', async ({ page }) => {
@@ -148,7 +148,7 @@ test.describe('Comentarios', () => {
     await page.getByRole('textbox', { name: 'Comentario', exact: true }).fill(`https://ejemplo.mx/${'a'.repeat(300)}`);
     await publicar(page);
     await expect(lista(page)).toHaveCount(1);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
   });
 
   test('conserva los saltos de línea del comentario', async ({ page }) => {
@@ -159,10 +159,13 @@ test.describe('Comentarios', () => {
   });
 
   test('los comentarios son de cada publicación', async ({ page }) => {
-    await page.getByRole('textbox', { name: 'Comentario', exact: true }).fill('En la principal');
-    await publicar(page);
-    await page.goto(`/#/publicacion/${OTRA}`);
+    // Un comentario guardado para otra publicación no debe aparecer en esta.
+    await page.evaluate(([k, otra]) => localStorage.setItem(k, JSON.stringify([{
+      id: '11111111-1111-4111-8111-111111111111', publicacion_id: otra, autor: 'X', contenido: 'De otra nota', fecha_creacion: '2026-10-01T00:00:00.000Z',
+    }])), [CLAVE, OTRA]);
+    await page.reload();
     await expect(page.getByText('Aún no hay comentarios.')).toBeVisible();
+    await expect(page.getByText('De otra nota')).toHaveCount(0);
   });
 
   test('si el almacenamiento falla al publicar, avisa y conserva el texto', async ({ page }) => {

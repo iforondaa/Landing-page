@@ -250,14 +250,13 @@ export const schemas = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "publicacion.schema.json",
     "title": "Publicacion",
-    "description": "Publicación institucional. En V1 se carga desde un archivo semilla; solo una puede tener `es_principal = true`.",
+    "description": "Publicación (contrato 2.0.0). El texto largo va en `contenido` (bloques tipificados) y el resumen visual en `caratula`; `cuerpo` (texto simple) queda como alternativa. Reglas de negocio que valida la capa de datos: debe existir `cuerpo` o `contenido`; si hay `imagen_url`, `imagen_alt` es obligatorio; solo una publicación con `es_principal = true`.",
     "type": "object",
     "additionalProperties": false,
     "required": [
       "id",
       "titulo",
       "resumen",
-      "cuerpo",
       "autor",
       "fecha_publicacion",
       "es_principal"
@@ -267,6 +266,12 @@ export const schemas = {
         "type": "string",
         "format": "uuid",
         "description": "Identificador único (UUID v4)."
+      },
+      "antetitulo": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160,
+        "description": "Texto breve sobre el título (contexto de la nota)."
       },
       "titulo": {
         "type": "string",
@@ -278,12 +283,12 @@ export const schemas = {
         "type": "string",
         "minLength": 1,
         "maxLength": 400,
-        "description": "Resumen que se muestra en el hero."
+        "description": "Resumen que se muestra en la portada del sitio."
       },
       "cuerpo": {
         "type": "string",
         "minLength": 1,
-        "description": "Texto completo; los párrafos se separan con una línea en blanco."
+        "description": "Texto simple (alternativa a `contenido`); párrafos separados por línea en blanco."
       },
       "autor": {
         "type": "string",
@@ -301,21 +306,366 @@ export const schemas = {
         "format": "uri-reference",
         "description": "Imagen de portada (ruta relativa o URL)."
       },
+      "imagen_alt": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 600,
+        "description": "Texto alternativo de la imagen de portada (obligatorio si hay imagen)."
+      },
       "es_principal": {
         "type": "boolean",
-        "description": "Indica si es la publicación principal del hero."
+        "description": "Indica si es la publicación principal."
+      },
+      "caratula": {
+        "$ref": "#/$defs/caratula"
+      },
+      "contenido": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/bloque"
+        },
+        "description": "Cuerpo de la nota en bloques tipificados."
+      }
+    },
+    "$defs": {
+      "texto_enriquecido": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4000,
+        "description": "Texto que admite **negritas** (doble asterisco). Nunca se interpreta como HTML."
+      },
+      "cifra": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "valor",
+          "texto"
+        ],
+        "properties": {
+          "valor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20,
+            "description": "Cifra destacada, ej. «48%»."
+          },
+          "texto": {
+            "$ref": "#/$defs/texto_enriquecido"
+          }
+        }
+      },
+      "dato": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "etiqueta",
+          "valores"
+        ],
+        "properties": {
+          "etiqueta": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "valores": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": 0
+            },
+            "description": "Un valor por serie (en `barras` y `dona`, uno solo)."
+          },
+          "tono": {
+            "type": "string",
+            "enum": [
+              "negativo-fuerte",
+              "negativo",
+              "positivo",
+              "positivo-fuerte"
+            ],
+            "description": "Polaridad para escalas divergentes (ausente ↔ presente)."
+          }
+        }
+      },
+      "grafica": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "variante",
+          "titulo",
+          "datos"
+        ],
+        "properties": {
+          "variante": {
+            "type": "string",
+            "enum": [
+              "barras",
+              "barras-agrupadas",
+              "apilada",
+              "dona"
+            ]
+          },
+          "titulo": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "nota": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "description": "Base y aclaraciones, ej. «Base: 96 respuestas.»"
+          },
+          "unidad": {
+            "type": "string",
+            "enum": [
+              "%",
+              "menciones"
+            ],
+            "description": "Unidad de los valores (por omisión, %)."
+          },
+          "series": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "description": "Nombres de las series (en `barras-agrupadas`)."
+          },
+          "datos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/dato"
+            }
+          }
+        }
+      },
+      "cita": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "texto"
+        ],
+        "properties": {
+          "texto": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1200
+          },
+          "fuente": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          }
+        }
+      },
+      "destacado": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "titulo",
+          "valor",
+          "texto"
+        ],
+        "properties": {
+          "titulo": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "valor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30
+          },
+          "texto": {
+            "$ref": "#/$defs/texto_enriquecido"
+          }
+        }
+      },
+      "caratula": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "titulo"
+        ],
+        "description": "Resumen visual al inicio de la nota («de un vistazo»).",
+        "properties": {
+          "titulo": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "subtitulo": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "cifras": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/cifra"
+            }
+          },
+          "graficas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/grafica"
+            }
+          },
+          "destacado": {
+            "$ref": "#/$defs/destacado"
+          },
+          "cita": {
+            "$ref": "#/$defs/cita"
+          },
+          "nota": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 800
+          }
+        }
+      },
+      "bloque": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tipo"
+        ],
+        "description": "Bloque del contenido. Campos según `tipo`: seccion/subseccion/parrafo → `texto`; lista → `elementos`; citas → `citas`; grafica → `grafica`.",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "seccion",
+              "subseccion",
+              "parrafo",
+              "lista",
+              "citas",
+              "grafica"
+            ]
+          },
+          "texto": {
+            "$ref": "#/$defs/texto_enriquecido"
+          },
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/texto_enriquecido"
+            }
+          },
+          "citas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/cita"
+            }
+          },
+          "grafica": {
+            "$ref": "#/$defs/grafica"
+          }
+        }
       }
     },
     "examples": [
       {
         "id": "7d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e5f",
+        "antetitulo": "Consulta a la base sindicalizada",
         "titulo": "Título de ejemplo de la publicación principal",
-        "resumen": "Resumen breve que aparece en la sección superior de la landing.",
-        "cuerpo": "Primer párrafo de la nota.\n\nSegundo párrafo de la nota.",
-        "autor": "Comunicación Institucional",
-        "fecha_publicacion": "2026-09-30T12:00:00.000Z",
-        "imagen_url": "assets/img/publicacion-principal.jpg",
-        "es_principal": true
+        "resumen": "Resumen breve que aparece en la portada del sitio.",
+        "autor": "Iván Foronda",
+        "fecha_publicacion": "2026-10-19T16:00:00.000Z",
+        "imagen_url": "assets/img/portada.svg",
+        "imagen_alt": "Gráfica de dona con los resultados principales.",
+        "es_principal": true,
+        "caratula": {
+          "titulo": "Los resultados en un vistazo",
+          "subtitulo": "96 respuestas",
+          "cifras": [
+            {
+              "valor": "48%",
+              "texto": "siente al Sindicato **presente**"
+            }
+          ],
+          "graficas": [
+            {
+              "variante": "dona",
+              "titulo": "Presencia",
+              "nota": "n=96",
+              "datos": [
+                {
+                  "etiqueta": "Presente",
+                  "valores": [
+                    48
+                  ],
+                  "tono": "positivo"
+                },
+                {
+                  "etiqueta": "Ausente",
+                  "valores": [
+                    52
+                  ],
+                  "tono": "negativo"
+                }
+              ]
+            }
+          ],
+          "destacado": {
+            "titulo": "Casos conocidos",
+            "valor": "17",
+            "texto": "personas narraron un caso."
+          },
+          "cita": {
+            "texto": "Una cita de ejemplo.",
+            "fuente": "Respuesta abierta"
+          },
+          "nota": "Nota metodológica."
+        },
+        "contenido": [
+          {
+            "tipo": "seccion",
+            "texto": "1. Lo esencial"
+          },
+          {
+            "tipo": "parrafo",
+            "texto": "Párrafo con **negritas**."
+          },
+          {
+            "tipo": "lista",
+            "elementos": [
+              "Uno",
+              "Dos"
+            ]
+          },
+          {
+            "tipo": "citas",
+            "citas": [
+              {
+                "texto": "Cita."
+              }
+            ]
+          },
+          {
+            "tipo": "grafica",
+            "grafica": {
+              "variante": "barras-agrupadas",
+              "titulo": "Prestaciones",
+              "unidad": "%",
+              "series": [
+                "Entre sus tres",
+                "Primer lugar"
+              ],
+              "datos": [
+                {
+                  "etiqueta": "Servicio médico",
+                  "valores": [
+                    85,
+                    49
+                  ]
+                }
+              ]
+            }
+          }
+        ]
       }
     ]
   }

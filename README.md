@@ -1,4 +1,4 @@
-# Manos a la obra — Landing de Publicaciones y Colaboradores
+# El Banobrino — Landing de Publicaciones y Colaboradores
 
 Proyecto desarrollado con la metodología **SDD (Especificación primero)**.
 Todo cambio de requisitos se hace primero en `spec/` y después en el código.
@@ -40,12 +40,11 @@ Requiere Node.js 18 o superior y `npm install`.
 
 ## Pendientes de contenido
 
-- Sustituir las publicaciones de ejemplo en `src/js/data/seed/publicaciones.seed.js`.
-- Colocar la imagen de portada y activar `imagen_url` en la semilla.
-- Definir el nombre y el lema finales: se cambian **solo** en `src/js/identidad.js` (y su texto de respaldo en `src/index.html`; una prueba avisa si no coinciden).
+- **Nota «El Sindicato visto por su base»** (`src/js/data/seed/publicaciones.seed.js`): cifras definitivas cargadas (v1.4). Autor: Iván Foronda; publicación: 19 de octubre de 2026. Falta confirmar los títulos de las gráficas del informe.
+- Nombre y lema definitivos: «El Banobrino» / «Acercando el Sindicato a las y los trabajadores». Si cambian, se editan **solo** en `src/js/identidad.js` (y su respaldo en `src/index.html`; una prueba avisa si no coinciden).
 - Pulir la paleta rosa: se cambia **solo** en `src/css/tokens.css`.
 - Logotipo (opcional), si se define uno.
-- Validar con el área jurídica si el formulario requiere enlace al aviso de privacidad (recaba datos personales).
+- **Aviso de privacidad**: retirado del sitio por ahora (v1.4). El borrador está en `spec/borradores/aviso-privacidad.md`; antes de recabar datos reales conviene reactivarlo con revisión legal.
 
 ## Control de versiones y verificación automática
 
@@ -56,7 +55,7 @@ Requiere Node.js 18 o superior y `npm install`.
 
 ## Antes de pasar a producción (V2)
 
-Este sitio es un **prototipo**: los datos viven en el navegador de cada visitante (LocalStorage), por lo que no recolecta registros reales y la vista `#/admin/exportar` no está protegida. Para producción se requiere backend con base de datos, autenticación del lado del servidor para la consulta/descarga y aviso de privacidad. Ver `spec/plan.md` §8.
+Este sitio es un **prototipo**: los datos viven en el navegador de cada visitante (LocalStorage), por lo que no recolecta registros reales y la vista `#/admin/exportar` no está protegida. Para producción se requiere backend con base de datos, autenticación del lado del servidor para la consulta/descarga y aviso de privacidad con revisión legal. Ver `spec/plan.md` §8.
 
 ## Estado
 
@@ -69,3 +68,5 @@ Este sitio es un **prototipo**: los datos viven en el navegador de cada visitant
 
 > La consulta de colaboradores está en `#/admin/exportar` (no aparece en el menú).
 - [x] Paso 6 — Verificación final (ver `spec/verificacion.md`)
+- [x] v1.3 — Primera nota real (carátula + informe) y aviso de privacidad
+- [x] v1.4 — Cifras definitivas, sin aviso de privacidad, identidad «El Banobrino»

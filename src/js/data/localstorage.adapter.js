@@ -41,6 +41,11 @@ export function createLocalStorageAdapter({
     const r = validar('publicacion.schema.json', p);
     if (!r.valido) throw new Error(`Publicación semilla #${i} no cumple el contrato: ${JSON.stringify(r.errores)}`);
   });
+  // Reglas de negocio del contrato 2.0.0 que JSON Schema no expresa por sí solo.
+  publicaciones.forEach((p, i) => {
+    if (!p.cuerpo && !p.contenido?.length) throw new Error(`Publicación semilla #${i}: debe tener \`cuerpo\` o \`contenido\`.`);
+    if (p.imagen_url && !p.imagen_alt) throw new Error(`Publicación semilla #${i}: \`imagen_alt\` es obligatorio cuando hay \`imagen_url\`.`);
+  });
   if (publicaciones.filter((p) => p.es_principal).length !== 1) {
     throw new Error('La semilla debe tener exactamente una publicación con es_principal = true.');
   }
@@ -137,7 +142,10 @@ export function createLocalStorageAdapter({
     createColaborador: operacion((entrada) => {
       const datos = limpiarEntrada(entrada, OPCIONALES.colaborador);
       comprobarEntrada('colaborador.input.schema.json', datos);
-      const colaborador = { id: generarId(), ...datos, fecha_registro: ahora().toISOString() };
+      const colaborador = {
+        id: generarId(), ...datos,
+        fecha_registro: ahora().toISOString(),
+      };
       comprobarSalida('colaborador.schema.json', colaborador);
       const todos = leer(CLAVES.colaboradores);
       todos.push(colaborador);

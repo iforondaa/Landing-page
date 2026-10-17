@@ -2,7 +2,7 @@ openapi: 3.1.0
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 info:
   title: Landing de Publicaciones y Colaboradores — Capa de datos
-  version: 1.1.0 # 1.1.0: campo opcional comentario_propuesta; teléfono admite guiones en cualquier posición (cambios compatibles)
+  version: 2.0.0 # 2.0.0: Publicacion con caratula/contenido (cuerpo pasa a opcional: cambio incompatible); Colaborador sin cambios respecto a 1.1.0. 1.1.0: comentario_propuesta y teléfono con guiones.
   summary: Contrato de la capa de datos de la landing (V1 simulada con LocalStorage).
   description: |
     Fuente única de verdad de las operaciones de datos de la landing.

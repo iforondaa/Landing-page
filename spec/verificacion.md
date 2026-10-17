@@ -97,6 +97,38 @@ Defectos encontrados durante el desarrollo (pasos 1–5) y ya cubiertos por prue
 | 4. Paleta rosa | `identidad.spec.js`: ajuste 4 (sin restos de guinda); contrastes en `tokens.css` |
 | 5. Nombre y lema | `identidad.spec.js`: ajuste 5; `identidad.test.js` (anti-deriva con `index.html`) |
 
+## 6.1 Re-verificación tras la v1.3 (2026-10-10): nota real y aviso de privacidad
+
+| Verificación | Resultado |
+|---|---|
+| Lint del contrato (`openapi.yaml` 2.0.0) y sincronía de esquemas | ✅ |
+| Pruebas unitarias y de contrato | ✅ 3,038 / 3,038 |
+| Pruebas de aceptación (escritorio + móvil) | ✅ 112 / 112 |
+| Accesibilidad (axe, 7 rutas × 4 anchos) y desbordamientos | ✅ 0 problemas |
+| HTML válido | ✅ |
+
+| Requisito v1.3 | Prueba(s) |
+|---|---|
+| Imagen de portada con texto alternativo | `nota.spec.js` |
+| Carátula: 3 cifras, 4 gráficas, destacado y cita | `nota.spec.js`; `contract.test.js` (coherencia de gráficas) |
+| Informe completo: 8 secciones, 8 gráficas, negritas, listas y 7 citas | `nota.spec.js`; `texto.test.js` |
+| Aviso de privacidad (11 secciones, enlazado desde pie, formulario y comentarios) | `nota.spec.js`; `texto.test.js` |
+| Consentimiento obligatorio y versión aceptada | `acceptance.spec.js`; `contract.test.js`; `validator.test.js`; `exportar.spec.js` (CSV de 9 columnas) |
+
+**Defecto hallado y corregido:** la casilla del aviso heredaba `width: 100%` de los campos de texto y ensanchaba la página en móvil (469 px en una pantalla de 412 px). Las pruebas no lo detectaban porque en móvil `innerWidth` crece junto con la página; ahora comparan contra `clientWidth` y hay una prueba de regresión.
+
+## 6.2 Re-verificación tras la v1.4 (2026-10-16)
+
+| Verificación | Resultado |
+|---|---|
+| Lint del contrato y sincronía de esquemas | ✅ |
+| Pruebas unitarias y de contrato | ✅ 2,795 / 2,795 (menos casos al retirar los campos del aviso del corpus diferencial) |
+| Pruebas de aceptación (escritorio + móvil) | ✅ 104 / 104 |
+| Accesibilidad (axe, 6 rutas × 4 anchos) y desbordamientos | ✅ 0 problemas |
+| HTML válido | ✅ |
+
+Pruebas nuevas o ajustadas: `nota.spec.js` (destacado «17 de 96», prioridad del Comité en %, pie con aclaración del SUNTB, sin casilla/enlaces/página del aviso), `identidad.spec.js` e `identidad.test.js` (El Banobrino).
+
 ## 7. Condiciones para producción (V2)
 
-Backend con base de datos (sustituir el adaptador por uno HTTP con la misma interfaz), autenticación del lado del servidor para la consulta y la descarga, y aviso de privacidad en el formulario. Al cambiar el contrato, aplicar oasdiff/Delimit para detectar cambios incompatibles (Fase 2 de la guía SDD).
+Backend con base de datos (sustituir el adaptador por uno HTTP con la misma interfaz), autenticación del lado del servidor para la consulta y la descarga, y aviso de privacidad con revisión legal (borrador en `spec/borradores/`). Al cambiar el contrato, aplicar oasdiff/Delimit para detectar cambios incompatibles (Fase 2 de la guía SDD).

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" width="1200" height="675" role="img" aria-labelledby="t d">
+  <title id="t">¿Qué tan presente has sentido al Sindicato?</title>
+  <desc id="d">El 52% lo siente casi ausente (44%) o totalmente ausente (8%); el 48% lo siente algo presente (38%) o muy presente (10%). Base: 96 respuestas.</desc>
+  <rect width="1200" height="675" fill="#fbeaf1"/>
+  <circle cx="1130" cy="40" r="210" fill="#f7d6e4" opacity=".55"/>
+  <circle cx="60" cy="690" r="230" fill="#ffffff" opacity=".45"/>
+  <rect x="0" y="0" width="1200" height="10" fill="#b83c74"/>
+  <g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif">
+    <text x="72" y="104" font-size="21" font-weight="700" letter-spacing="3" fill="#8a2752">CONSULTA A LA BASE SINDICALIZADA · n=96</text>
+    <text x="72" y="182" font-size="54" font-weight="800" fill="#1f2328">¿Qué tan presente</text>
+    <text x="72" y="248" font-size="54" font-weight="800" fill="#1f2328">has sentido</text>
+    <text x="72" y="314" font-size="54" font-weight="800" fill="#1f2328">al Sindicato?</text>
+    <rect x="72" y="372" width="10" height="92" rx="5" fill="#9c2a5c"/>
+    <text x="104" y="438" font-size="84" font-weight="800" fill="#9c2a5c">52%</text>
+    <text x="330" y="414" font-size="25" font-weight="600" fill="#3a3f45">lo siente casi o</text>
+    <text x="330" y="448" font-size="25" font-weight="600" fill="#3a3f45">totalmente ausente</text>
+    <rect x="72" y="494" width="10" height="92" rx="5" fill="#24548f"/>
+    <text x="104" y="560" font-size="84" font-weight="800" fill="#24548f">48%</text>
+    <text x="330" y="536" font-size="25" font-weight="600" fill="#3a3f45">lo siente algo o</text>
+    <text x="330" y="570" font-size="25" font-weight="600" fill="#3a3f45">muy presente</text>
+  </g>
+  <circle cx="895" cy="350" r="190" fill="none" stroke="#ffffff" stroke-width="82"/>
+    <circle cx="895" cy="350" r="190" pathLength="100" fill="none" stroke="#24548f" stroke-width="74" stroke-dasharray="9.3 90.7" stroke-dashoffset="0" transform="rotate(-90 895 350)"/>
+  <circle cx="895" cy="350" r="190" pathLength="100" fill="none" stroke="#4f8ad6" stroke-width="74" stroke-dasharray="37.3 62.7" stroke-dashoffset="-10" transform="rotate(-90 895 350)"/>
+  <circle cx="895" cy="350" r="190" pathLength="100" fill="none" stroke="#d9669a" stroke-width="74" stroke-dasharray="43.3 56.7" stroke-dashoffset="-48" transform="rotate(-90 895 350)"/>
+  <circle cx="895" cy="350" r="190" pathLength="100" fill="none" stroke="#9c2a5c" stroke-width="74" stroke-dasharray="7.3 92.7" stroke-dashoffset="-92" transform="rotate(-90 895 350)"/>
+  <g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif" text-anchor="middle">
+    <text x="895" y="344" font-size="30" font-weight="800" fill="#1f2328">96</text>
+    <text x="895" y="378" font-size="20" font-weight="600" fill="#545b64">respuestas</text>
+  </g>
+  <g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif" font-size="19" font-weight="600" fill="#3a3f45">
+    <rect x="640" y="596" width="16" height="16" rx="3" fill="#24548f"/><text x="664" y="611">Muy presente 10%</text>
+    <rect x="890" y="596" width="16" height="16" rx="3" fill="#4f8ad6"/><text x="914" y="611">Algo presente 38%</text>
+    <rect x="640" y="628" width="16" height="16" rx="3" fill="#d9669a"/><text x="664" y="643">Casi ausente 44%</text>
+    <rect x="890" y="628" width="16" height="16" rx="3" fill="#9c2a5c"/><text x="914" y="643">Totalmente ausente 8%</text>
+  </g>
+</svg>

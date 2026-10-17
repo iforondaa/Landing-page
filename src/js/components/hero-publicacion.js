@@ -8,7 +8,8 @@ export function mediaPublicacion(publicacion, clase = 'hero-card__media') {
     contenedor.classList.add(`${clase}--vacia`, 'media--vacia');
     return contenedor;
   }
-  const img = h('img', { src: publicacion.imagen_url, alt: '', decoding: 'async', fetchpriority: 'high' });
+  // La portada puede ser informativa (p. ej. una gráfica): su texto alternativo viene del contrato.
+  const img = h('img', { src: publicacion.imagen_url, alt: publicacion.imagen_alt ?? '', decoding: 'async', fetchpriority: 'high' });
   img.addEventListener('error', () => {
     img.remove();
     contenedor.classList.add(`${clase}--vacia`, 'media--vacia');

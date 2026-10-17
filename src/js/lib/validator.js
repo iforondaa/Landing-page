@@ -2,9 +2,9 @@
  * Validador ligero de JSON Schema 2020-12.
  *
  * Implementa solo el subconjunto que usan los esquemas de spec/schemas:
- * $ref (entre archivos, con puntero JSON), type, enum, required, properties,
- * additionalProperties:false, items, minLength, maxLength, pattern y format
- * (uuid, email, date-time, uri-reference).
+ * $ref (entre archivos, con puntero JSON), $defs, type, enum, required, properties,
+ * additionalProperties:false, items, minLength, maxLength, minimum, maximum,
+ * pattern y format (uuid, email, date-time, uri-reference).
  *
  * Las pruebas de contrato comparan este validador contra Ajv (validador de
  * referencia) para garantizar que ambos aceptan y rechazan exactamente lo mismo.
@@ -13,9 +13,9 @@
  */
 
 const SOPORTADAS = new Set([
-  '$schema', '$id', '$ref', 'title', 'description', 'examples', 'default',
+  '$schema', '$id', '$ref', '$defs', 'title', 'description', 'examples', 'default',
   'type', 'enum', 'required', 'properties', 'additionalProperties', 'items',
-  'minLength', 'maxLength', 'pattern', 'format',
+  'minLength', 'maxLength', 'minimum', 'maximum', 'pattern', 'format',
 ]);
 
 const RE_UUID = /^(?:urn:uuid:)?[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
@@ -75,6 +75,8 @@ function mensaje(regla, ruta, param) {
     case 'format': return MENSAJES_FORMATO[param] ?? 'Formato no válido.';
     case 'additionalProperties': return 'Campo no permitido.';
     case 'enum': return 'Valor no permitido.';
+    case 'minimum': return `El valor mínimo es ${param}.`;
+    case 'maximum': return `El valor máximo es ${param}.`;
     default: return 'Tipo de dato no válido.';
   }
 }
@@ -134,6 +136,11 @@ export function crearValidador(schemas) {
       return;
     }
     if (schema.enum && !schema.enum.includes(valor)) agregar('enum');
+
+    if (typeof valor === 'number') {
+      if (schema.minimum !== undefined && valor < schema.minimum) agregar('minimum', schema.minimum);
+      if (schema.maximum !== undefined && valor > schema.maximum) agregar('maximum', schema.maximum);
+    }
 
     if (typeof valor === 'string') {
       const inicio = errores.length;
