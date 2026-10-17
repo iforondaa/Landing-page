@@ -130,11 +130,33 @@ export const schemas = {
       }
     ]
   },
+  "comentario.moderacion.schema.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "comentario.moderacion.schema.json",
+    "title": "ModeracionComentario",
+    "description": "Cuerpo para ocultar o volver a mostrar un comentario (solo administración).",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "oculto"
+    ],
+    "properties": {
+      "oculto": {
+        "type": "boolean",
+        "description": "`true` lo oculta al público; `false` lo vuelve a mostrar."
+      }
+    },
+    "examples": [
+      {
+        "oculto": true
+      }
+    ]
+  },
   "comentario.schema.json": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "comentario.schema.json",
     "title": "Comentario",
-    "description": "Comentario persistido al pie de una publicación. `id` y `fecha_creacion` los asigna la capa de persistencia.",
+    "description": "Comentario persistido al pie de una publicación. `id`, `fecha_creacion` y `oculto` los asigna la capa de persistencia.",
     "type": "object",
     "additionalProperties": false,
     "required": [
@@ -173,6 +195,11 @@ export const schemas = {
         "type": "string",
         "format": "date-time",
         "description": "Fecha y hora de creación (ISO 8601, UTC)."
+      },
+      "oculto": {
+        "type": "boolean",
+        "default": false,
+        "description": "Solo en la vista de administración: `true` si quien administra lo ocultó. Los comentarios ocultos no se devuelven al público."
       }
     },
     "examples": [
@@ -201,6 +228,7 @@ export const schemas = {
         "type": "string",
         "enum": [
           "VALIDACION",
+          "NO_AUTORIZADO",
           "NO_ENCONTRADO",
           "ALMACENAMIENTO"
         ],

@@ -1,0 +1,23 @@
+# Evita que el proyecto gratuito de Supabase se pause por inactividad (se pausa
+# tras una semana sin uso): hace una consulta mínima los lunes y jueves.
+# Si src/js/config.js aún no tiene los datos de Supabase, no hace nada.
+name: Mantener activa la base de datos
+
+on:
+  schedule:
+    - cron: '17 15 * * 1,4'   # lunes y jueves, 9:17 h de la Ciudad de México
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    name: Consulta mínima a Supabase
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: node scripts/mantener-activo.mjs

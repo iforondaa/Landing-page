@@ -129,6 +129,23 @@ Defectos encontrados durante el desarrollo (pasos 1–5) y ya cubiertos por prue
 
 Pruebas nuevas o ajustadas: `nota.spec.js` (destacado «17 de 96», prioridad del Comité en %, pie con aclaración del SUNTB, sin casilla/enlaces/página del aviso), `identidad.spec.js` e `identidad.test.js` (El Banobrino).
 
+## 6.3 Verificación de la V2 (2026-10-17)
+
+| Verificación | Resultado |
+|---|---|
+| Lint del contrato (`openapi.yaml` 2.1.0) y sincronía de esquemas | ✅ |
+| Pruebas unitarias, de contrato y del adaptador/sesión de Supabase (`fetch` simulado) | ✅ 2,976 |
+| Integración contra Postgres 16 + PostgREST 12 con `supabase/esquema.sql` | ✅ 10 / 10 |
+| Aceptación en navegador (modo prototipo, escritorio + móvil) | ✅ 120 |
+| Aceptación en modo Supabase de punta a punta (registro, comentario, acceso, moderación, sesión vencida) | ✅ 5 / 5 |
+| Política de seguridad de contenido (`src/_headers`) sin bloqueos | ✅ |
+| Accesibilidad (axe, 7 rutas × 4 anchos, incluido `#/admin`) y desbordamientos | ✅ 0 problemas |
+| HTML válido | ✅ |
+
+**Las pruebas detectan reglas débiles:** se aflojaron a propósito dos reglas RLS (comentarios ocultos visibles; registros visibles para cualquier sesión) y las pruebas de integración fallaron, como debían. Lo mismo con la política de contenido (quitar `style-src-attr` rompe las gráficas y la prueba lo detecta).
+
+**No verificable desde aquí:** el inicio de sesión real de Supabase Auth (se simuló con tokens firmados que la base sí valida) y la configuración de las cuentas de Supabase y Cloudflare, que crea el responsable.
+
 ## 7. Condiciones para producción (V2)
 
-Backend con base de datos (sustituir el adaptador por uno HTTP con la misma interfaz), autenticación del lado del servidor para la consulta y la descarga, y aviso de privacidad con revisión legal (borrador en `spec/borradores/`). Al cambiar el contrato, aplicar oasdiff/Delimit para detectar cambios incompatibles (Fase 2 de la guía SDD).
+✅ Backend con base de datos (Supabase, adaptador con la misma interfaz) y autenticación del lado del servidor para la consulta y la descarga (V2). Pendiente por decisión del responsable: aviso de privacidad (borrador en `spec/borradores/`). Al cambiar el contrato, aplicar oasdiff/Delimit para detectar cambios incompatibles (Fase 2 de la guía SDD).

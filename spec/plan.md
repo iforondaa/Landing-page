@@ -1,6 +1,6 @@
 # Plan Técnico (Plan Phase) — Landing Page de Publicaciones y Colaboradores Banobras
 
-> **Versión:** 1.12 · **Fecha:** 2026-10-16 · **Estado:** V1 (prototipo) con la nota definitiva e identidad «El Banobrino» (spec v1.4) — ver `spec/verificacion.md`
+> **Versión:** 2.0 · **Fecha:** 2026-10-17 · **Estado:** V2 implementada y verificada (Supabase + Cloudflare Pages, spec v2.0 §8); falta crear las cuentas y publicar — ver `spec/verificacion.md`
 > **Documentos relacionados:** `spec/landing-spec.md` (Specify) · `spec/openapi.yaml` (contrato) · `spec/schemas/` (esquemas)
 > **Metodología de referencia:** Guía Maestra de Implementación — Desarrollo Basado en Especificaciones (SDD)
 
@@ -198,6 +198,29 @@ La Tarea 4 (persistencia) es dependencia de las Tareas 2 y 3, por lo que se adel
 | 5 | Vista de consulta + descarga CSV | Tarea 4 (exportación) | CSV abre correctamente en Excel |
 | 6 | Verificación final | — | Lint + pruebas de contrato + aceptación en verde |
 
+## 7.1 Arquitectura de la V2
+
+```
+Navegador ──(clave pública)──► Supabase REST (PostgREST) ──► Postgres con RLS (supabase/esquema.sql)
+   │                                 ▲
+   └─ #/admin: correo+contraseña ──► Supabase Auth ──(token)──┘   solo cuentas en public.administradores
+Cloudflare Pages sirve src/ tal cual (sin build) + encabezados de seguridad (src/_headers)
+```
+
+| Pieza | Archivo | Qué hace |
+|---|---|---|
+| Configuración | `src/js/config.js` | URL y clave pública de Supabase; vacío = modo prototipo |
+| Selección de adaptador | `src/js/data/api.js` | Supabase si hay configuración; LocalStorage si no |
+| Adaptador V2 | `src/js/data/supabase.adapter.js` | Las 9 operaciones del contrato 2.1.0 con `fetch`, sin librerías |
+| Piezas comunes | `src/js/data/catalogo.js` | Semilla de publicaciones y validación, compartidas por ambos adaptadores |
+| Sesión | `src/js/data/sesion.js` | Inicio/cierre de sesión, renovación del token, verificación de administración |
+| Vista | `src/js/views/admin.view.js` | Acceso, tabla + CSV de colaboradores y moderación de comentarios |
+| Base de datos | `supabase/esquema.sql` | Tablas, restricciones, función `registrar_colaborador`, permisos y RLS |
+| Pruebas reales | `scripts/supabase-local.sh`, `tests/integracion/`, `tests/supabase.spec.js` | Postgres + PostgREST locales con el mismo esquema |
+| Mantenimiento | `.github/workflows/mantener-activo.yml` | Consulta lunes y jueves para que Supabase no se pause |
+
+Decisiones técnicas: el registro de colaboradores entra **solo** por la función `registrar_colaborador` (el público no tiene permiso sobre la tabla); los comentarios aceptan del público únicamente `publicacion_id`, `autor` y `contenido`; la administración solo puede cambiar `oculto` o borrar. La lista pública pide explícitamente `oculto=is.false` y nunca envía el token de administración.
+
 ## 8. Fuera de alcance en V1 (se mantienen los Non-Goals)
 
 - Autenticación / inicio de sesión (la vista de exportación no está protegida).
@@ -225,3 +248,4 @@ La Tarea 4 (persistencia) es dependencia de las Tareas 2 y 3, por lo que se adel
 | 1.10 | 2026-10-06 | Control de versiones: repositorio Git (rama `main`), `.gitattributes` (LF), `.gitignore`, `package-lock.json` y verificación automática en GitHub Actions (Fase 5 de la guía SDD). Repositorio privado en GitHub, publicado con GitHub Desktop. |
 | 1.11 | 2026-10-10 | Primera nota real (spec v1.3 §7.2): carátula tomada del Resumen ejecutivo + Informe completo como bloques; 12 gráficas HTML/SVG con paleta validada para daltonismo; imagen de portada SVG con texto alternativo. Aviso de privacidad genérico (`#/aviso-de-privacidad`) y consentimiento expreso obligatorio en el registro (datos sensibles, LFPDPPP 2025). Contrato 2.0.0. Corregido: la casilla heredaba `width:100%` y ensanchaba la página en móvil; las pruebas de desbordamiento ahora usan `clientWidth`. 3,038 unitarias + 112 de aceptación en verde; 28 combinaciones ruta × ancho sin fallas. |
 | 1.12 | 2026-10-16 | Spec v1.4 §7.3: cifras definitivas de la versión «revision_consistencia» (carátula e informe); se retira el aviso de privacidad (página, enlaces y casilla) y `Colaborador` vuelve a sus campos de la v1.2 (texto del aviso guardado como borrador); pie con aclaración sobre el SUNTB; identidad definitiva «El Banobrino» / «Acercando el Sindicato a las y los trabajadores»; carpeta «versión definitiva» en `.gitignore`. 2,795 unitarias + 104 de aceptación en verde; 24 combinaciones ruta × ancho sin fallas. |
+| 2.0 | 2026-10-17 | **V2** (spec v2.0 §8): Supabase como base de datos y Cloudflare Pages como hospedaje. Contrato 2.1.0 (compatible): sesión de administración, `listComentariosAdmin`, `moderarComentario`, `deleteComentario`, error 401 `NO_AUTORIZADO`. Esquema SQL con RLS; adaptador de Supabase sin librerías; vista `#/admin` con inicio de sesión y moderación; encabezados de seguridad (CSP). Pruebas: 2,986 unitarias/contrato/integración (10 contra Postgres+PostgREST reales, incluidas pruebas de mutación de las reglas) + 125 de aceptación (5 en modo Supabase de punta a punta); 28 combinaciones ruta × ancho sin fallas. Nuevo trabajo de CI «Reglas de seguridad de Supabase». |

@@ -2,13 +2,16 @@ openapi: 3.1.0
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 info:
   title: Landing de Publicaciones y Colaboradores — Capa de datos
-  version: 2.0.0 # 2.0.0: Publicacion con caratula/contenido (cuerpo pasa a opcional: cambio incompatible); Colaborador sin cambios respecto a 1.1.0. 1.1.0: comentario_propuesta y teléfono con guiones.
-  summary: Contrato de la capa de datos de la landing (V1 simulada con LocalStorage).
+  version: 2.1.0 # 2.1.0: V2 con Supabase: sesión de administración, moderación de comentarios y error 401 (compatible). 2.0.0: Publicacion con caratula/contenido (cuerpo pasa a opcional: cambio incompatible); Colaborador sin cambios respecto a 1.1.0. 1.1.0: comentario_propuesta y teléfono con guiones.
+  summary: Contrato de la capa de datos de la landing (V1 simulada con LocalStorage; V2 con Supabase).
   description: |
     Fuente única de verdad de las operaciones de datos de la landing.
     En V1 el "servidor" es un adaptador de LocalStorage que implementa estas
     operaciones con los mismos `operationId`, cuerpos y respuestas. En V2 se
     sustituye por un backend HTTP real sin cambiar la interfaz.
+    V2 (2.1.0): el adaptador de Supabase implementa las mismas operaciones; las
+    reglas de seguridad de la base de datos (supabase/esquema.sql) hacen que el
+    público solo pueda registrarse, comentar y leer comentarios visibles.
 
     Reglas transversales:
     - `id` (UUID v4) y las marcas de tiempo (ISO 8601, UTC) las asigna la capa de datos.
@@ -22,6 +25,11 @@ info:
 servers:
   - url: /api
     description: Mock V1 (adaptador LocalStorage en el navegador)
+  - url: https://{proyecto}.supabase.co/rest/v1
+    description: V2 (Supabase); el adaptador traduce cada operación a su API REST
+    variables:
+      proyecto:
+        default: proyecto
 tags:
   - name: Publicaciones
     description: Lectura de publicaciones institucionales.
@@ -29,6 +37,8 @@ tags:
     description: Comentarios al pie de cada publicación.
   - name: Colaboradores
     description: Registro y exportación de colaboradores.
+  - name: Administracion
+    description: Operaciones que requieren la sesión de quien administra.
 paths:
   /publicaciones:
     get:
@@ -116,7 +126,9 @@ paths:
       operationId: listColaboradores
       tags: [Colaboradores]
       summary: Listar colaboradores
-      description: Devuelve todos los registros, del más reciente al más antiguo. Alimenta la vista de consulta y la descarga CSV.
+      description: Devuelve todos los registros, del más reciente al más antiguo. Alimenta la vista de consulta y la descarga CSV. Requiere la sesión de administración.
+      security:
+        - sesionAdmin: []
       responses:
         '200':
           description: Lista de colaboradores.
@@ -126,6 +138,8 @@ paths:
                 type: array
                 items:
                   $ref: './schemas/colaborador.schema.json'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
         '500':
           $ref: '#/components/responses/ErrorAlmacenamiento'
     post:
@@ -150,8 +164,90 @@ paths:
           $ref: '#/components/responses/ErrorValidacion'
         '500':
           $ref: '#/components/responses/ErrorAlmacenamiento'
+  /admin/comentarios:
+    get:
+      operationId: listComentariosAdmin
+      tags: [Administracion, Comentarios]
+      summary: Listar todos los comentarios (moderación)
+      description: Devuelve todos los comentarios de todas las publicaciones, incluidos los ocultos, del más reciente al más antiguo. Cada uno trae `oculto`.
+      security:
+        - sesionAdmin: []
+      responses:
+        '200':
+          description: Lista de comentarios.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: './schemas/comentario.schema.json'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '500':
+          $ref: '#/components/responses/ErrorAlmacenamiento'
+  /admin/comentarios/{comentario_id}:
+    parameters:
+      - $ref: '#/components/parameters/ComentarioId'
+    patch:
+      operationId: moderarComentario
+      tags: [Administracion, Comentarios]
+      summary: Ocultar o mostrar un comentario
+      description: Cambia la visibilidad pública de un comentario y lo devuelve actualizado.
+      security:
+        - sesionAdmin: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/comentario.moderacion.schema.json'
+      responses:
+        '200':
+          description: Comentario actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/comentario.schema.json'
+        '400':
+          $ref: '#/components/responses/ErrorValidacion'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorAlmacenamiento'
+    delete:
+      operationId: deleteComentario
+      tags: [Administracion, Comentarios]
+      summary: Borrar un comentario
+      description: Elimina el comentario de forma definitiva.
+      security:
+        - sesionAdmin: []
+      responses:
+        '204':
+          description: Comentario borrado.
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorAlmacenamiento'
 components:
+  securitySchemes:
+    sesionAdmin:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token de la sesión de quien administra (Supabase Auth). En V1 (LocalStorage) no se exige.
   parameters:
+    ComentarioId:
+      name: comentario_id
+      in: path
+      required: true
+      description: Identificador del comentario.
+      schema:
+        type: string
+        format: uuid
     PublicacionId:
       name: publicacion_id
       in: path
@@ -167,8 +263,17 @@ components:
         application/json:
           schema:
             $ref: './schemas/error.schema.json'
+    NoAutorizado:
+      description: Falta la sesión de administración o ya expiró.
+      content:
+        application/json:
+          schema:
+            $ref: './schemas/error.schema.json'
+          example:
+            codigo: NO_AUTORIZADO
+            mensaje: Tu sesión expiró o no tienes permiso. Vuelve a iniciar sesión.
     NoEncontrado:
-      description: La publicación no existe.
+      description: La publicación o el comentario no existe.
       content:
         application/json:
           schema:

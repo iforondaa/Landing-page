@@ -6,20 +6,22 @@
  * datos y, ante un error, rechaza con un ApiError cuyo status coincide con el
  * contrato (400, 404 o 500).
  *
- * En V2 se reemplaza por un adaptador HTTP con la misma interfaz.
+ * Se usa mientras src/js/config.js no tenga los datos de Supabase (modo
+ * prototipo) y en las pruebas. En este modo la administración no pide sesión.
  */
-import { schemas } from '../contract/schemas.generated.js';
-import { crearValidador } from '../lib/validator.js';
 import { ApiError } from './api-error.js';
 import { limpiarEntrada, OPCIONALES } from '../lib/normalizar.js';
+import { AUTOR_ANONIMO, crearCatalogo, crearValidacion, porFecha } from './catalogo.js';
+
+export { AUTOR_ANONIMO };
 
 export const CLAVES = Object.freeze({
   colaboradores: 'landing.v1.colaboradores',
   comentarios: 'landing.v1.comentarios',
 });
-export const AUTOR_ANONIMO = 'Anónimo';
 
-const porFecha = (campo, sentido) => (a, b) => sentido * (Date.parse(a[campo]) - Date.parse(b[campo]));
+/** Campos públicos de un comentario (sin `oculto`). */
+const publico = ({ oculto, ...c }) => c;
 
 /**
  * @param {object} opciones
@@ -34,37 +36,8 @@ export function createLocalStorageAdapter({
   ahora = () => new Date(),
   generarId = () => crypto.randomUUID(),
 }) {
-  const validar = crearValidador(schemas);
-
-  // La semilla también debe cumplir el contrato; si no, es un error de desarrollo.
-  publicaciones.forEach((p, i) => {
-    const r = validar('publicacion.schema.json', p);
-    if (!r.valido) throw new Error(`Publicación semilla #${i} no cumple el contrato: ${JSON.stringify(r.errores)}`);
-  });
-  // Reglas de negocio del contrato 2.0.0 que JSON Schema no expresa por sí solo.
-  publicaciones.forEach((p, i) => {
-    if (!p.cuerpo && !p.contenido?.length) throw new Error(`Publicación semilla #${i}: debe tener \`cuerpo\` o \`contenido\`.`);
-    if (p.imagen_url && !p.imagen_alt) throw new Error(`Publicación semilla #${i}: \`imagen_alt\` es obligatorio cuando hay \`imagen_url\`.`);
-  });
-  if (publicaciones.filter((p) => p.es_principal).length !== 1) {
-    throw new Error('La semilla debe tener exactamente una publicación con es_principal = true.');
-  }
-  if (new Set(publicaciones.map((p) => p.id)).size !== publicaciones.length) {
-    throw new Error('La semilla tiene publicaciones con id repetido.');
-  }
-  const catalogo = structuredClone(publicaciones);
-
-  function comprobarEntrada(schemaId, datos) {
-    const r = validar(schemaId, datos);
-    if (!r.valido) {
-      throw new ApiError('VALIDACION', { detalles: r.errores.map(({ campo, mensaje }) => ({ campo: campo || '(datos)', mensaje })) });
-    }
-  }
-
-  function comprobarSalida(schemaId, entidad) {
-    const r = validar(schemaId, entidad);
-    if (!r.valido) throw new Error(`Violación de contrato al construir ${schemaId}: ${JSON.stringify(r.errores)}`);
-  }
+  const { validar, comprobarEntrada, comprobarSalida } = crearValidacion();
+  const catalogo = crearCatalogo(publicaciones, validar);
 
   function leer(clave) {
     let crudo;
@@ -92,33 +65,36 @@ export function createLocalStorageAdapter({
     }
   }
 
-  function buscarPublicacion(id) {
-    const p = catalogo.find((x) => x.id === id);
-    if (!p) throw new ApiError('NO_ENCONTRADO');
-    return p;
+  function indiceComentario(todos, id) {
+    const i = todos.findIndex((c) => c.id === id);
+    if (i < 0) throw new ApiError('NO_ENCONTRADO', { mensaje: 'El comentario ya no existe.' });
+    return i;
   }
 
   /** Convierte una función síncrona en operación asíncrona que devuelve copias. */
   const operacion = (fn) => async (...args) => structuredClone(fn(...args));
 
   return Object.freeze({
+    modo: 'local',
+
     /** GET /publicaciones — de la más reciente a la más antigua. */
-    listPublicaciones: operacion(() => [...catalogo].sort(porFecha('fecha_publicacion', -1))),
+    listPublicaciones: operacion(() => catalogo.listar()),
 
     /** GET /publicaciones/{publicacion_id} */
-    getPublicacion: operacion((publicacionId) => buscarPublicacion(publicacionId)),
+    getPublicacion: operacion((publicacionId) => catalogo.buscar(publicacionId)),
 
-    /** GET /publicaciones/{publicacion_id}/comentarios — el más antiguo primero. */
+    /** GET /publicaciones/{publicacion_id}/comentarios — visibles, el más antiguo primero. */
     listComentarios: operacion((publicacionId) => {
-      buscarPublicacion(publicacionId);
+      catalogo.buscar(publicacionId);
       return leer(CLAVES.comentarios)
-        .filter((c) => c.publicacion_id === publicacionId)
-        .sort(porFecha('fecha_creacion', 1));
+        .filter((c) => c.publicacion_id === publicacionId && !c.oculto)
+        .sort(porFecha('fecha_creacion', 1))
+        .map(publico);
     }),
 
     /** POST /publicaciones/{publicacion_id}/comentarios — autor vacío → "Anónimo". */
     createComentario: operacion((publicacionId, entrada) => {
-      buscarPublicacion(publicacionId);
+      catalogo.buscar(publicacionId);
       const datos = limpiarEntrada(entrada, OPCIONALES.comentario);
       comprobarEntrada('comentario.input.schema.json', datos);
       const comentario = {
@@ -142,15 +118,35 @@ export function createLocalStorageAdapter({
     createColaborador: operacion((entrada) => {
       const datos = limpiarEntrada(entrada, OPCIONALES.colaborador);
       comprobarEntrada('colaborador.input.schema.json', datos);
-      const colaborador = {
-        id: generarId(), ...datos,
-        fecha_registro: ahora().toISOString(),
-      };
+      const colaborador = { id: generarId(), ...datos, fecha_registro: ahora().toISOString() };
       comprobarSalida('colaborador.schema.json', colaborador);
       const todos = leer(CLAVES.colaboradores);
       todos.push(colaborador);
       escribir(CLAVES.colaboradores, todos);
       return colaborador;
+    }),
+
+    /** GET /admin/comentarios — todos, incluidos los ocultos, del más reciente al más antiguo. */
+    listComentariosAdmin: operacion(() => leer(CLAVES.comentarios)
+      .map((c) => ({ ...c, oculto: c.oculto === true }))
+      .sort(porFecha('fecha_creacion', -1))),
+
+    /** PATCH /admin/comentarios/{comentario_id} */
+    moderarComentario: operacion((comentarioId, cambios) => {
+      comprobarEntrada('comentario.moderacion.schema.json', cambios);
+      const todos = leer(CLAVES.comentarios);
+      const i = indiceComentario(todos, comentarioId);
+      todos[i] = { ...todos[i], oculto: cambios.oculto };
+      escribir(CLAVES.comentarios, todos);
+      return todos[i];
+    }),
+
+    /** DELETE /admin/comentarios/{comentario_id} */
+    deleteComentario: operacion((comentarioId) => {
+      const todos = leer(CLAVES.comentarios);
+      todos.splice(indiceComentario(todos, comentarioId), 1);
+      escribir(CLAVES.comentarios, todos);
+      return undefined;
     }),
   });
 }

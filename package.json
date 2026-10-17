@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Landing de publicaciones y registro de colaboradores (V1, SDD).",
+  "description": "El Banobrino: landing de publicaciones y colaboradores (SDD; V2 con Supabase).",
   "scripts": {
     "start": "npx --yes serve@14 src -l 5173",
     "lint:spec": "spectral lint spec/openapi.yaml --ruleset .spectral.yaml --fail-severity=warn",
@@ -11,7 +11,8 @@
     "check:schemas": "node scripts/gen-schemas.mjs --check",
     "test": "vitest run",
     "verify": "npm run lint:spec && npm run check:schemas && npm test",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:integracion": "vitest run tests/integracion"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

@@ -4,13 +4,14 @@
  */
 export const CODIGOS = Object.freeze({
   VALIDACION: { status: 400, mensaje: 'Revisa los campos marcados.' },
+  NO_AUTORIZADO: { status: 401, mensaje: 'Tu sesión expiró o no tienes permiso. Vuelve a iniciar sesión.' },
   NO_ENCONTRADO: { status: 404, mensaje: 'La publicación solicitada no existe.' },
   ALMACENAMIENTO: { status: 500, mensaje: 'No se pudo guardar o leer la información. Intenta de nuevo.' },
 });
 
 export class ApiError extends Error {
   /**
-   * @param {'VALIDACION'|'NO_ENCONTRADO'|'ALMACENAMIENTO'} codigo
+   * @param {'VALIDACION'|'NO_AUTORIZADO'|'NO_ENCONTRADO'|'ALMACENAMIENTO'} codigo
    * @param {{ detalles?: {campo: string, mensaje: string}[], causa?: unknown, mensaje?: string }} [opciones]
    */
   constructor(codigo, { detalles, causa, mensaje } = {}) {

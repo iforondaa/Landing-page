@@ -31,6 +31,7 @@ Requiere Node.js 18 o superior y `npm install`.
 | `npm run check:schemas` | Falla si el código está desfasado respecto a `spec/schemas` |
 | `npm test` | Pruebas unitarias y de contrato (validador, adaptador, formulario, router, CSV) |
 | `npm run verify` | Todo lo anterior en orden |
+| `npm run test:integracion` | Pruebas contra Postgres + PostgREST locales (`bash scripts/supabase-local.sh iniciar` primero; ver el archivo) |
 | `npm run test:e2e` | Pruebas de aceptación en navegador (escenarios BDD). La primera vez: `npx playwright install chromium` |
 
 **Flujo para cambiar una regla:** editar `spec/schemas/…` → `npm run gen:schemas` → `npm run verify`.
@@ -44,7 +45,7 @@ Requiere Node.js 18 o superior y `npm install`.
 - Nombre y lema definitivos: «El Banobrino» / «Acercando el Sindicato a las y los trabajadores». Si cambian, se editan **solo** en `src/js/identidad.js` (y su respaldo en `src/index.html`; una prueba avisa si no coinciden).
 - Pulir la paleta rosa: se cambia **solo** en `src/css/tokens.css`.
 - Logotipo (opcional), si se define uno.
-- **Aviso de privacidad**: retirado del sitio por ahora (v1.4). El borrador está en `spec/borradores/aviso-privacidad.md`; antes de recabar datos reales conviene reactivarlo con revisión legal.
+- **Aviso de privacidad**: retirado por decisión del responsable (sitio interno). El borrador está en `spec/borradores/aviso-privacidad.md` por si se reactiva.
 
 ## Control de versiones y verificación automática
 
@@ -53,9 +54,42 @@ Requiere Node.js 18 o superior y `npm install`.
 - Flujo diario con **GitHub Desktop**: revisar cambios → escribir un resumen → **Commit to main** → **Push origin**.
 - Para volver a una versión anterior (por ejemplo, un nombre o color previo): en GitHub Desktop, pestaña **History** → clic derecho sobre el cambio → **Revert changes in commit**.
 
-## Antes de pasar a producción (V2)
+## Publicar el sitio (V2: Supabase + Cloudflare Pages)
 
-Este sitio es un **prototipo**: los datos viven en el navegador de cada visitante (LocalStorage), por lo que no recolecta registros reales y la vista `#/admin/exportar` no está protegida. Para producción se requiere backend con base de datos, autenticación del lado del servidor para la consulta/descarga y aviso de privacidad con revisión legal. Ver `spec/plan.md` §8.
+Mientras `src/js/config.js` esté vacío, el sitio funciona en **modo prototipo** (los datos se quedan en cada navegador). Para que los registros y comentarios sean reales, sigue estos pasos **una sola vez**. Los nombres de los botones pueden variar un poco según la versión de cada servicio.
+
+### A. Supabase (base de datos)
+1. Entra a **supabase.com** y crea una cuenta (puedes usar tu cuenta de GitHub).
+2. **New project** → nombre `banobrino` → escribe una contraseña para la base de datos (guárdala en un lugar seguro; el sitio no la usa) → región **East US** → **Create new project**. Espera un par de minutos.
+3. **SQL Editor** → **New query** → pega **todo** el contenido de `supabase/esquema.sql` → **Run**. Debe decir *Success*.
+4. **Authentication → Sign In / Providers**: desactiva **Allow new users to sign up** (nadie más podrá crear cuentas).
+5. **Authentication → Users → Add user → Create new user**: tu correo y una contraseña fuerte; marca **Auto Confirm User**.
+6. De vuelta en **SQL Editor**, ejecuta (con tu correo):
+   ```sql
+   insert into public.administradores (user_id, nota)
+   select id, 'Administración del sitio' from auth.users where email = 'tu-correo@ejemplo.com'
+   on conflict do nothing;
+   ```
+   Debe decir *1 row*. Si dice *0 rows*, revisa que el correo sea idéntico al del paso 5.
+7. **Project Settings → API Keys** (o **Data API**): copia la **Project URL** y la **Publishable key** (empieza con `sb_publishable_`; si tu proyecto muestra «anon public», usa esa).
+8. Abre `src/js/config.js` (con VS Code o el Bloc de notas) y pega los dos valores entre las comillas. **Nunca** pegues la *secret key* ni la *service_role*.
+9. En GitHub Desktop: **Commit to main** → **Push origin**.
+
+### B. Cloudflare Pages (publicación)
+1. Entra a **dash.cloudflare.com** y crea una cuenta.
+2. **Workers & Pages → Create → Pages → Connect to Git** → autoriza GitHub **solo** para el repositorio `Landing-page`.
+3. Configuración: *Production branch* `main` · *Framework preset* **None** · *Build command* **(vacío)** · *Build output directory* **`src`** → **Save and Deploy**.
+4. Cloudflare te da una dirección `https://….pages.dev`. Esa es la que compartes. Cada vez que hagas **Push origin**, el sitio se actualiza solo en un minuto.
+
+### C. Probar
+1. Abre la dirección, regístrate en «Quiero colaborar» y deja un comentario en la nota.
+2. Entra a `…pages.dev/#/admin`, inicia sesión con tu correo y contraseña: debes ver tu registro y tu comentario, y poder ocultarlo o borrarlo.
+3. En Supabase → **Table Editor** también puedes ver las tablas `colaboradores` y `comentarios`.
+
+### Mantenimiento
+- El plan gratuito de Supabase se pausa tras una semana sin uso. GitHub Actions hace una consulta automática los lunes y jueves (`.github/workflows/mantener-activo.yml`). Si aun así se pausa, en Supabase pulsa **Restore project**.
+- Para agregar a otra persona administradora: repite los pasos A5 y A6 con su correo.
+- Si alguien abusa de los comentarios, ocúltalos o bórralos desde `#/admin`.
 
 ## Estado
 
@@ -66,7 +100,9 @@ Este sitio es un **prototipo**: los datos viven en el navegador de cada visitant
 - [x] Paso 4 — Lectura + comentarios (Tarea 2)
 - [x] Paso 5 — Consulta + descarga CSV (Tarea 4, exportación)
 
-> La consulta de colaboradores está en `#/admin/exportar` (no aparece en el menú).
+> La administración (registros y moderación de comentarios) está en `#/admin` (no aparece en el menú).
 - [x] Paso 6 — Verificación final (ver `spec/verificacion.md`)
 - [x] v1.3 — Primera nota real (carátula + informe) y aviso de privacidad
 - [x] v1.4 — Cifras definitivas, sin aviso de privacidad, identidad «El Banobrino»
+- [x] v2.0 — Supabase + Cloudflare Pages: registros y comentarios reales, administración con inicio de sesión y moderación
+- [ ] Crear las cuentas de Supabase y Cloudflare y publicar (ver «Publicar el sitio»)

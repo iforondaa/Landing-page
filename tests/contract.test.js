@@ -6,7 +6,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createLocalStorageAdapter, CLAVES, AUTOR_ANONIMO } from '../src/js/data/localstorage.adapter.js';
-import { ApiError } from '../src/js/data/api-error.js';
+import { ApiError, CODIGOS } from '../src/js/data/api-error.js';
+import { createSupabaseAdapter } from '../src/js/data/supabase.adapter.js';
+import { schemas } from '../src/js/contract/schemas.generated.js';
 import { publicaciones } from '../src/js/data/seed/publicaciones.seed.js';
 import { generar, SALIDA } from '../scripts/gen-schemas.mjs';
 import { MemoryStorage } from './helpers/memory-storage.js';
@@ -60,13 +62,19 @@ describe('Sincronía contrato ↔ código (anti-deriva)', () => {
 
   it('el adaptador expone exactamente los operationId de openapi.yaml', () => {
     const ids = [...OPENAPI.matchAll(/operationId:\s*(\w+)/g)].map((m) => m[1]).sort();
-    expect(ids).toHaveLength(6);
-    expect(Object.keys(api).sort()).toEqual(ids);
+    expect(ids).toHaveLength(9);
+    const operaciones = (adaptador) => Object.keys(adaptador).filter((k) => k !== 'modo').sort();
+    expect(operaciones(api)).toEqual(ids);
     for (const id of ids) expect(typeof api[id]).toBe('function');
+    // El adaptador de Supabase (V2) expone exactamente la misma interfaz.
+    const supa = createSupabaseAdapter({ url: 'https://x.supabase.co', clave: 'sb_publishable_x', publicaciones, fetch: async () => { throw new Error('sin red'); } });
+    expect(operaciones(supa)).toEqual(ids);
+    expect([api.modo, supa.modo]).toEqual(['local', 'supabase']);
   });
 
   it('cada código de error del adaptador está declarado en openapi.yaml', () => {
-    for (const status of ['400', '404', '500']) expect(OPENAPI).toContain(`'${status}':`);
+    for (const status of ['400', '401', '404', '500']) expect(OPENAPI).toContain(`'${status}':`);
+    for (const codigo of Object.keys(CODIGOS)) expect(schemas['error.schema.json'].properties.codigo.enum).toContain(codigo);
   });
 });
 
@@ -283,5 +291,48 @@ describe('Fallos de almacenamiento → ALMACENAMIENTO (500)', () => {
     expect(storage.getItem(CLAVES.colaboradores)).toBe('{no es json');
     storage.setItem(CLAVES.comentarios, '{"no":"arreglo"}');
     await rechazaCon(api.listComentarios(PRINCIPAL.id), 'ALMACENAMIENTO', 500);
+  });
+});
+
+describe('Moderación de comentarios (contrato 2.1.0, adaptador local)', () => {
+  let storage; let api;
+  beforeEach(() => {
+    storage = new MemoryStorage();
+    api = createLocalStorageAdapter({ storage, publicaciones });
+  });
+
+  it('ocultar quita el comentario de la lista pública pero no de la de administración; mostrar lo devuelve', async () => {
+    const a = await api.createComentario(PRINCIPAL.id, { contenido: 'Uno' });
+    const b = await api.createComentario(PRINCIPAL.id, { contenido: 'Dos' });
+    const oculto = await api.moderarComentario(a.id, { oculto: true });
+    expect(oculto).toMatchObject({ id: a.id, oculto: true });
+    cumple('comentario.schema.json', oculto);
+    expect((await api.listComentarios(PRINCIPAL.id)).map((c) => c.id)).toEqual([b.id]);
+    const admin = await api.listComentariosAdmin();
+    expect(admin.map((c) => [c.id, c.oculto])).toEqual(expect.arrayContaining([[a.id, true], [b.id, false]]));
+    admin.forEach((c) => cumple('comentario.schema.json', c));
+    await api.moderarComentario(a.id, { oculto: false });
+    expect((await api.listComentarios(PRINCIPAL.id)).map((c) => c.id)).toEqual([a.id, b.id]);
+  });
+
+  it('la lista pública nunca trae el campo `oculto`', async () => {
+    const a = await api.createComentario(PRINCIPAL.id, { contenido: 'Uno' });
+    await api.moderarComentario(a.id, { oculto: false });
+    expect(Object.keys((await api.listComentarios(PRINCIPAL.id))[0])).not.toContain('oculto');
+  });
+
+  it('borrar elimina el comentario; un id inexistente → NO_ENCONTRADO (404)', async () => {
+    const a = await api.createComentario(PRINCIPAL.id, { contenido: 'Uno' });
+    await expect(api.deleteComentario(a.id)).resolves.toBeUndefined();
+    expect(await api.listComentariosAdmin()).toEqual([]);
+    await rechazaCon(api.deleteComentario(a.id), 'NO_ENCONTRADO', 404);
+    await rechazaCon(api.moderarComentario(ID_INEXISTENTE, { oculto: true }), 'NO_ENCONTRADO', 404);
+  });
+
+  it('moderar con datos fuera del contrato → VALIDACION (400)', async () => {
+    const a = await api.createComentario(PRINCIPAL.id, { contenido: 'Uno' });
+    await rechazaCon(api.moderarComentario(a.id, { oculto: 'sí' }), 'VALIDACION', 400);
+    await rechazaCon(api.moderarComentario(a.id, {}), 'VALIDACION', 400);
+    await rechazaCon(api.moderarComentario(a.id, { oculto: true, contenido: 'cambiado' }), 'VALIDACION', 400);
   });
 });

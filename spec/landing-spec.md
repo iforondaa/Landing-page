@@ -1,6 +1,6 @@
-# Especificación de Producto: «Manos a la obra» — Landing de Publicaciones y Colaboradores (base sindicalizada de Banobras)
+# Especificación de Producto: «El Banobrino» — Landing de Publicaciones y Colaboradores (base sindicalizada de Banobras)
 
-> **Versión:** 1.4 · **Fecha:** 2026-10-16 · Ver decisiones en la sección 7 (v1.2 en §7.1; nota real y carátula de la v1.3 en §7.2; contenido definitivo, retiro del aviso de privacidad e identidad definitiva de la v1.4 en §7.3) y el plan técnico en `spec/plan.md`.
+> **Versión:** 2.0 · **Fecha:** 2026-10-17 · Ver decisiones en la sección 7 (v1.2 en §7.1; v1.3 en §7.2; v1.4 en §7.3) y la **V2 (publicación con base de datos real) en la sección 8** y el plan técnico en `spec/plan.md`.
 
 ## 1. Visión General y Alcance (Specify)
 Desarrollo de un sitio web de una sola página (Landing Page) enfocado en la lectura de publicaciones y en el registro de colaboradores, dirigido a las trabajadoras y los trabajadores sindicalizados de Banobras.
@@ -74,8 +74,8 @@ Desarrollo de un sitio web de una sola página (Landing Page) enfocado en la lec
   - **THEN** el comentario se guarda y muestra como autor "Anónimo".
 
 ## 5. Límites de Alcance y Exclusiones (Non-Goals)
-- **NO** implementar paneles de autenticación o inicio de sesión de usuarios en esta fase.
-- **NO** integrar bases de datos complejas de WordPress ni CMS externos en V1 (utilizar LocalStorage o un Mock DB estructurado).
+- **NO** implementar paneles de autenticación o inicio de sesión de usuarios en esta fase. *(V2: solo quien administra inicia sesión; el público no necesita cuenta. Ver §8.)*
+- **NO** integrar bases de datos complejas de WordPress ni CMS externos en V1 (utilizar LocalStorage o un Mock DB estructurado). *(V2: base de datos en Supabase; las publicaciones siguen en el archivo semilla, sin CMS.)*
 - **NO** incluir pasarelas de pago ni procesamiento financiero.
 
 ## 6. Descomposición en Tareas (Tasks)
@@ -119,3 +119,30 @@ Desarrollo de un sitio web de una sola página (Landing Page) enfocado en la lec
 2. **Aviso de privacidad retirado por ahora**: sin página, sin enlaces y sin casilla obligatoria en el formulario; `Colaborador` vuelve a sus campos de la v1.2. El texto se conserva como borrador en `spec/borradores/aviso-privacidad.md` por si se reactiva (requeriría revisión legal y consentimiento expreso).
 3. **Pie de página**: «Iniciativa de trabajadoras y trabajadores sindicalizados de Banobras. No es un sitio oficial de Banobras, del Gobierno de México ni del Sindicato Único Nacional de Trabajadores de Banobras.»
 4. **Identidad definitiva**: nombre «El Banobrino» (se muestra en mayúsculas) y lema «Acercando el Sindicato a las y los trabajadores».
+
+## 8. Versión 2 — Sitio publicado con base de datos real (v2.0 · 2026-10-17)
+
+**Objetivo:** que el formulario «Quiero colaborar» y los comentarios funcionen de verdad para un grupo interno de compañeras y compañeros: los registros llegan a quien administra y los comentarios los ve todo el que visita la nota.
+
+### 8.1 Decisiones (aprobadas por el responsable)
+1. **Base de datos:** Supabase (plan gratuito). **Hospedaje:** Cloudflare Pages, conectado al repositorio de GitHub (cada *Push* publica).
+2. **Acceso:** cualquiera con el enlace; lo «interno» depende de con quién se comparta.
+3. **Comentarios:** se publican al instante; quien administra puede **ocultarlos**, **volver a mostrarlos** o **borrarlos**.
+4. **Sin aviso de privacidad** por ahora (sitio interno entre conocidos). El borrador sigue en `spec/borradores/`.
+5. **Administración:** `#/admin` (también `#/admin/exportar`), fuera del menú, protegida con correo y contraseña de Supabase Auth. Solo las cuentas dadas de alta en la tabla `administradores` entran.
+
+### 8.2 Requisitos
+- El público puede registrarse, comentar y leer comentarios visibles; **no** puede leer, cambiar ni borrar registros, ni moderar comentarios. Esto lo garantiza la base de datos (reglas RLS en `supabase/esquema.sql`), no solo la página.
+- Las reglas de longitud y formato del contrato se repiten como restricciones en la base: datos inválidos se rechazan aunque alguien se salte el formulario.
+- `id` y fechas los asigna la base de datos.
+- Si la sesión de administración expira, se vuelve a pedir el inicio de sesión. La sesión se cierra al cerrar la pestaña.
+- Sin los datos de conexión (`src/js/config.js` vacío), el sitio funciona como prototipo (LocalStorage).
+
+### 8.3 Escenarios de aceptación adicionales
+- **Escenario 3: Moderación** — **GIVEN** un comentario publicado, **WHEN** quien administra lo oculta, **THEN** deja de verse en la nota (también para quien consulte la API directamente) y puede volver a mostrarlo o borrarlo.
+- **Escenario 4: Acceso restringido** — **GIVEN** una persona sin sesión o con una cuenta sin permiso, **WHEN** entra a `#/admin` o consulta la API de registros, **THEN** no ve ningún registro.
+
+### 8.4 Riesgos aceptados
+- El plan gratuito de Supabase pausa el proyecto tras una semana sin uso: lo evita una consulta automática dos veces por semana (GitHub Actions); si llegara a pausarse, se reactiva desde el panel.
+- No hay límite de envíos por persona (posible spam): se atiende moderando; si ocurre, se puede añadir un límite en la base.
+- Se recaban datos personales sin aviso de privacidad, por decisión del responsable para un uso interno.

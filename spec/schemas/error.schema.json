@@ -5,25 +5,58 @@
   "description": "Respuesta de error uniforme de la capa de datos.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["codigo", "mensaje"],
+  "required": [
+    "codigo",
+    "mensaje"
+  ],
   "properties": {
-    "codigo": { "type": "string", "enum": ["VALIDACION", "NO_ENCONTRADO", "ALMACENAMIENTO"], "description": "Código de error legible por máquina." },
-    "mensaje": { "type": "string", "description": "Mensaje para mostrar al usuario." },
+    "codigo": {
+      "type": "string",
+      "enum": [
+        "VALIDACION",
+        "NO_AUTORIZADO",
+        "NO_ENCONTRADO",
+        "ALMACENAMIENTO"
+      ],
+      "description": "Código de error legible por máquina."
+    },
+    "mensaje": {
+      "type": "string",
+      "description": "Mensaje para mostrar al usuario."
+    },
     "detalles": {
       "type": "array",
       "description": "Errores por campo (solo para VALIDACION).",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["campo", "mensaje"],
+        "required": [
+          "campo",
+          "mensaje"
+        ],
         "properties": {
-          "campo": { "type": "string", "description": "Nombre del campo." },
-          "mensaje": { "type": "string", "description": "Descripción del error." }
+          "campo": {
+            "type": "string",
+            "description": "Nombre del campo."
+          },
+          "mensaje": {
+            "type": "string",
+            "description": "Descripción del error."
+          }
         }
       }
     }
   },
   "examples": [
-    { "codigo": "VALIDACION", "mensaje": "Revisa los campos marcados.", "detalles": [ { "campo": "email", "mensaje": "Formato de correo no válido." } ] }
+    {
+      "codigo": "VALIDACION",
+      "mensaje": "Revisa los campos marcados.",
+      "detalles": [
+        {
+          "campo": "email",
+          "mensaje": "Formato de correo no válido."
+        }
+      ]
+    }
   ]
 }

@@ -2,16 +2,51 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "comentario.schema.json",
   "title": "Comentario",
-  "description": "Comentario persistido al pie de una publicación. `id` y `fecha_creacion` los asigna la capa de persistencia.",
+  "description": "Comentario persistido al pie de una publicación. `id`, `fecha_creacion` y `oculto` los asigna la capa de persistencia.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "publicacion_id", "autor", "contenido", "fecha_creacion"],
+  "required": [
+    "id",
+    "publicacion_id",
+    "autor",
+    "contenido",
+    "fecha_creacion"
+  ],
   "properties": {
-    "id": { "type": "string", "format": "uuid", "description": "Identificador único (UUID v4)." },
-    "publicacion_id": { "type": "string", "format": "uuid", "description": "Publicación a la que pertenece el comentario." },
-    "autor": { "type": "string", "minLength": 1, "maxLength": 120, "default": "Anónimo", "description": "Nombre del autor. Si se omite o viene vacío se guarda \"Anónimo\"." },
-    "contenido": { "type": "string", "minLength": 1, "maxLength": 2000, "pattern": "^\\S(?:[\\s\\S]*\\S)?$", "description": "Texto del comentario, sin espacios al inicio ni al final." },
-    "fecha_creacion": { "type": "string", "format": "date-time", "description": "Fecha y hora de creación (ISO 8601, UTC)." }
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Identificador único (UUID v4)."
+    },
+    "publicacion_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Publicación a la que pertenece el comentario."
+    },
+    "autor": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "default": "Anónimo",
+      "description": "Nombre del autor. Si se omite o viene vacío se guarda \"Anónimo\"."
+    },
+    "contenido": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "^\\S(?:[\\s\\S]*\\S)?$",
+      "description": "Texto del comentario, sin espacios al inicio ni al final."
+    },
+    "fecha_creacion": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de creación (ISO 8601, UTC)."
+    },
+    "oculto": {
+      "type": "boolean",
+      "default": false,
+      "description": "Solo en la vista de administración: `true` si quien administra lo ocultó. Los comentarios ocultos no se devuelven al público."
+    }
   },
   "examples": [
     {

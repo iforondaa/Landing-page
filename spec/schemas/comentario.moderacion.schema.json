@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "comentario.moderacion.schema.json",
+  "title": "ModeracionComentario",
+  "description": "Cuerpo para ocultar o volver a mostrar un comentario (solo administración).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "oculto"
+  ],
+  "properties": {
+    "oculto": {
+      "type": "boolean",
+      "description": "`true` lo oculta al público; `false` lo vuelve a mostrar."
+    }
+  },
+  "examples": [
+    {
+      "oculto": true
+    }
+  ]
+}
