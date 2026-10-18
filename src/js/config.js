@@ -12,6 +12,6 @@
  * la «secret key» ni la «service_role».
  */
 export const CONFIG = Object.freeze({
-  supabaseUrl: 'https://tahiygeuvffmkxbgzwjn.supabase.co/rest/v1/',
+  supabaseUrl: 'https://tahiygeuvffmkxbgzwjn.supabase.co',
   supabaseClave: 'sb_publishable_BkmyH9eCpV1X3Wb4xsT9aA_Tt2GDUCa',
 });
