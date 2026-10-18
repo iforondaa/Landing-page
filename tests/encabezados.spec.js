@@ -2,7 +2,7 @@
  * Los encabezados de seguridad de src/_headers (Cloudflare Pages) no rompen el sitio:
  * se aplican aquí a cada respuesta y se recorren las páginas buscando bloqueos.
  */
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/test-local.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,6 +19,15 @@ test('incluye política de contenido y protección contra incrustación', () => 
 
 test('con la política activa, todas las páginas funcionan sin bloqueos', async ({ page }) => {
   await page.route('http://localhost:5173/**', async (r) => {
+    // Modo local: esta prueba de prototipo no debe depender de config.js real
+    // ni escribir en Supabase; se fuerza el modo LocalStorage.
+    if (r.request().url().endsWith('/js/config.js')) {
+      return r.fulfill({
+        contentType: 'text/javascript',
+        headers: ENCABEZADOS,
+        body: 'export const CONFIG = Object.freeze({ supabaseUrl: "", supabaseClave: "" });',
+      });
+    }
     const resp = await r.fetch();
     await r.fulfill({ response: resp, headers: { ...resp.headers(), ...ENCABEZADOS } });
   });

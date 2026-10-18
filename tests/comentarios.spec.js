@@ -1,5 +1,5 @@
 /** Pruebas de aceptación de la vista de lectura y los comentarios (Tarea 2 · Escenario BDD 2). */
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/test-local.js';
 import AxeBuilder from '@axe-core/playwright';
 import { IDENTIDAD } from '../src/js/identidad.js';
 

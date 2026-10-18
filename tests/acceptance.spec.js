@@ -2,7 +2,7 @@
  * Pruebas de aceptación (Playwright) — escenarios BDD de spec/landing-spec.md.
  * Ejecutar: npx playwright install chromium (una vez) y luego npm run test:e2e
  */
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/test-local.js';
 import AxeBuilder from '@axe-core/playwright';
 
 const CLAVE = 'landing.v1.colaboradores';

@@ -1,5 +1,5 @@
 /** Pruebas de aceptación de la consulta y descarga CSV (Tarea 4 · spec 6.4). */
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/test-local.js';
 import AxeBuilder from '@axe-core/playwright';
 import fs from 'node:fs';
 

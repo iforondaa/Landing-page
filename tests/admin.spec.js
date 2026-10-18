@@ -1,5 +1,5 @@
 /** Administración en modo prototipo (LocalStorage): moderación de comentarios (spec v2.0). */
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/test-local.js';
 import AxeBuilder from '@axe-core/playwright';
 
 const ID = '7d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e5f';
