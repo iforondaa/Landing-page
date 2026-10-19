@@ -32,7 +32,7 @@ Requiere Node.js 18 o superior y `npm install`.
 | `npm test` | Pruebas unitarias y de contrato (validador, adaptador, formulario, router, CSV) |
 | `npm run verify` | Todo lo anterior en orden |
 | `npm run test:integracion` | Pruebas contra Postgres + PostgREST locales (`bash scripts/supabase-local.sh iniciar` primero; ver el archivo) |
-| `npm run test:e2e` | Pruebas de aceptación en navegador (escenarios BDD). La primera vez: `npx playwright install chromium` |
+| `npm run test:e2e` | Pruebas de aceptación en navegador (escenarios BDD). Fuerzan el modo prototipo con `tests/helpers/test-local.js`, así nunca escriben en la base real. La primera vez: `npx playwright install chromium` |
 
 **Flujo para cambiar una regla:** editar `spec/schemas/…` → `npm run gen:schemas` → `npm run verify`.
 
@@ -105,4 +105,5 @@ Mientras `src/js/config.js` esté vacío, el sitio funciona en **modo prototipo*
 - [x] v1.3 — Primera nota real (carátula + informe) y aviso de privacidad
 - [x] v1.4 — Cifras definitivas, sin aviso de privacidad, identidad «El Banobrino»
 - [x] v2.0 — Supabase + Cloudflare Pages: registros y comentarios reales, administración con inicio de sesión y moderación
-- [ ] Crear las cuentas de Supabase y Cloudflare y publicar (ver «Publicar el sitio»)
+- [x] Cuentas de Supabase y Cloudflare creadas; `src/js/config.js` con los datos reales
+- [ ] Prueba de humo en el sitio publicado y limpieza de los datos de prueba

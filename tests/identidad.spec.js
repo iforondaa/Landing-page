@@ -1,5 +1,5 @@
 /** Ajustes de identidad y texto (spec 1.2): nombre, lema, texto de "Quiero colaborar" y paleta rosa. */
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/test-local.js';
 import { IDENTIDAD } from '../src/js/identidad.js';
 
 test('ajuste 5: el encabezado muestra el nombre y el lema del sitio', async ({ page }) => {

@@ -1,7 +1,7 @@
 /**
  * Fixture de Playwright para las pruebas de prototipo (modo LocalStorage).
  *
- * Estas suites (acceptance, admin, comentarios, exportar, encabezados) verifican
+ * Estas suites (acceptance, admin, comentarios, exportar, encabezados, nota, identidad) verifican
  * el comportamiento del sitio en «modo prototipo»: los datos se guardan en el
  * navegador, no en Supabase. El sitio decide el modo según `src/js/config.js`,
  * que en producción lleva la URL y la clave reales de Supabase.

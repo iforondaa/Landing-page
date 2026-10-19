@@ -1,5 +1,5 @@
 /** Nota «El Sindicato visto por su base»: portada, carátula, informe con gráficas (spec v1.3; aviso de privacidad retirado en v1.4). */
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/test-local.js';
 import AxeBuilder from '@axe-core/playwright';
 
 const ID = '7d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e5f';
