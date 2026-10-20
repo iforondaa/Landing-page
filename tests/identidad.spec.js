@@ -7,7 +7,7 @@ test('ajuste 5: el encabezado muestra el nombre y el lema del sitio', async ({ p
   const marca = page.locator('header .marca');
   await expect(marca.locator('.marca__nombre')).toHaveText('El Banobrino');
   await expect(marca.locator('.marca__nombre')).toHaveCSS('text-transform', 'uppercase'); // se ve en mayúsculas
-  await expect(marca.locator('.marca__sub')).toHaveText('Acercando el Sindicato a las y los trabajadores');
+  await expect(marca.locator('.marca__sub')).toHaveText('Acercando el Sindicato a las y los trabajadores sindicalizados de Banobras');
   await expect(page).toHaveTitle(`Inicio · ${IDENTIDAD.nombre}`);
   await expect(page.locator('footer')).toContainText(IDENTIDAD.nombre);
 });

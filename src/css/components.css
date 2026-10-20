@@ -52,8 +52,8 @@
   text-transform: uppercase;
   text-wrap: balance;
 }
-.marca { max-width: 40rem; gap: 0.2rem; }
-.marca__sub { /* lema: «Acercando el Sindicato a las y los trabajadores» */
+.marca { max-width: 46rem; gap: 0.2rem; }
+.marca__sub { /* lema: «Acercando el Sindicato a las y los trabajadores sindicalizados de Banobras» */
   font-size: var(--texto-sm);
   font-weight: 600;
   line-height: 1.35;

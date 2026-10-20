@@ -146,3 +146,6 @@ Desarrollo de un sitio web de una sola página (Landing Page) enfocado en la lec
 - El plan gratuito de Supabase pausa el proyecto tras una semana sin uso: lo evita una consulta automática dos veces por semana (GitHub Actions); si llegara a pausarse, se reactiva desde el panel.
 - No hay límite de envíos por persona (posible spam): se atiende moderando; si ocurre, se puede añadir un límite en la base.
 - Se recaban datos personales sin aviso de privacidad, por decisión del responsable para un uso interno.
+
+### 8.5 Ajuste de identidad (2026-10-19)
+- El lema pasa a «Acercando el Sindicato a las y los trabajadores sindicalizados de Banobras» (encabezado y pie). Se edita solo en `src/js/identidad.js` y su respaldo en `src/index.html`.

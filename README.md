@@ -42,7 +42,7 @@ Requiere Node.js 18 o superior y `npm install`.
 ## Pendientes de contenido
 
 - **Nota «El Sindicato visto por su base»** (`src/js/data/seed/publicaciones.seed.js`): cifras definitivas cargadas (v1.4). Autor: Iván Foronda; publicación: 19 de octubre de 2026. Falta confirmar los títulos de las gráficas del informe.
-- Nombre y lema definitivos: «El Banobrino» / «Acercando el Sindicato a las y los trabajadores». Si cambian, se editan **solo** en `src/js/identidad.js` (y su respaldo en `src/index.html`; una prueba avisa si no coinciden).
+- Nombre y lema definitivos: «El Banobrino» / «Acercando el Sindicato a las y los trabajadores sindicalizados de Banobras». Si cambian, se editan **solo** en `src/js/identidad.js` (y su respaldo en `src/index.html`; una prueba avisa si no coinciden).
 - Pulir la paleta rosa: se cambia **solo** en `src/css/tokens.css`.
 - Logotipo (opcional), si se define uno.
 - **Aviso de privacidad**: retirado por decisión del responsable (sitio interno). El borrador está en `spec/borradores/aviso-privacidad.md` por si se reactiva.

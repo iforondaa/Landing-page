@@ -10,7 +10,7 @@ const HTML = fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta
 describe('Identidad del sitio', () => {
   it('nombre y lema vigentes', () => {
     expect(IDENTIDAD.nombre).toBe('El Banobrino');
-    expect(IDENTIDAD.lema).toBe('Acercando el Sindicato a las y los trabajadores');
+    expect(IDENTIDAD.lema).toBe('Acercando el Sindicato a las y los trabajadores sindicalizados de Banobras');
   });
 
   it('el texto de respaldo de index.html coincide con identidad.js (anti-deriva)', () => {
