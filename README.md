@@ -106,4 +106,5 @@ Mientras `src/js/config.js` esté vacío, el sitio funciona en **modo prototipo*
 - [x] v1.4 — Cifras definitivas, sin aviso de privacidad, identidad «El Banobrino»
 - [x] v2.0 — Supabase + Cloudflare Pages: registros y comentarios reales, administración con inicio de sesión y moderación
 - [x] Cuentas de Supabase y Cloudflare creadas; `src/js/config.js` con los datos reales
-- [ ] Prueba de humo en el sitio publicado y limpieza de los datos de prueba
+- [x] Sitio publicado en Cloudflare
+- [x] v2.1 — Pestaña «¿Quiénes somos?» (texto en `src/js/contenido/quienes-somos.js`)

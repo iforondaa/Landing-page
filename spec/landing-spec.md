@@ -149,3 +149,8 @@ Desarrollo de un sitio web de una sola página (Landing Page) enfocado en la lec
 
 ### 8.5 Ajuste de identidad (2026-10-19)
 - El lema pasa a «Acercando el Sindicato a las y los trabajadores sindicalizados de Banobras» (encabezado y pie). Se edita solo en `src/js/identidad.js` y su respaldo en `src/index.html`.
+
+### 8.6 Pestaña «¿Quiénes somos?» (v2.1 · 2026-11-09)
+- Nueva pestaña en el menú, entre «Publicaciones» y «Quiero colaborar», con el mismo estilo que «Publicaciones» («Quiero colaborar» conserva su botón). En celular, las dos pestañas de texto van en la primera fila y el botón abajo, a todo lo ancho.
+- Página `#/quienes-somos` con el texto entregado por el responsable, sin cambios: entrada, presentación, aclaración destacada («no forma parte de la dirigencia sindical…»), y las secciones «¿Qué hacemos?» (con invitación y botón a «Quiero colaborar»), «Nuestro compromiso» y «Nuestro derecho a participar» (artículos constitucionales en negritas).
+- El texto se edita en `src/js/contenido/quienes-somos.js`.

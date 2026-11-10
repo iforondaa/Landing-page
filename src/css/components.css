@@ -82,7 +82,10 @@
   transition: background var(--transicion), color var(--transicion);
 }
 @media (max-width: 39.99rem) {
+  /* Celular: las pestañas de texto comparten la primera fila; «Quiero colaborar» ocupa la segunda. */
+  .nav__lista { flex-wrap: wrap; row-gap: var(--esp-2); }
   .nav__lista li { flex: 1 1 0; min-width: 0; }
+  .nav__lista li:has(.nav__enlace--cta) { flex-basis: 100%; }
   .nav__lista .nav__enlace { display: block; text-align: center; padding-inline: var(--esp-2); }
 }
 .nav__enlace:hover { background: var(--color-fondo-alt); color: var(--color-primario-oscuro); }
@@ -517,6 +520,13 @@
 .moderacion__item .alerta { margin-top: var(--esp-2); }
 .acceso { max-width: 28rem; display: flex; flex-direction: column; gap: var(--esp-4); }
 .acceso .alerta { margin-top: 0; }
+
+/* ===== ¿Quiénes somos? ===== */
+.quienes__aclaracion { margin-top: var(--esp-6); padding: var(--esp-4) var(--esp-5); border-left: 4px solid var(--color-primario); border-radius: var(--radio-sm); background: var(--color-primario-suave); }
+.quienes__aclaracion .bloque-parrafo { margin-top: 0; font-size: 1rem; color: var(--color-primario-oscuro); font-weight: 600; }
+.quienes__invitacion { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-4);
+  margin-top: var(--esp-6); padding: var(--esp-5); border-radius: var(--radio); background: var(--color-fondo-alt); border: 1px solid var(--color-borde); }
+.quienes__invitacion p { flex: 1 1 18rem; margin: 0; font-weight: 700; color: var(--color-primario-oscuro); }
 
 /* ===== Pie ===== */
 .pie { background: var(--color-primario-oscuro); color: rgb(255 255 255 / 85%); font-size: var(--texto-sm); }

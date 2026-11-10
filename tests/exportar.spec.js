@@ -25,7 +25,7 @@ test('sin registros: aviso y botón deshabilitado', async ({ page }) => {
 
 test('la vista no aparece en el encabezado', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('navigation').getByRole('link')).toHaveText(['Publicaciones', 'Quiero colaborar']);
+  await expect(page.getByRole('navigation').getByRole('link')).toHaveText(['Publicaciones', '¿Quiénes somos?', 'Quiero colaborar']);
 });
 
 test('consulta: tabla del más reciente al más antiguo y descarga CSV con el contrato', async ({ page }) => {
