@@ -30,7 +30,7 @@ export const QUIENES_SOMOS = Object.freeze({
       titulo: 'Nuestro derecho a participar',
       parrafos: [
         'La información, la libre expresión y la participación son fundamentales para una vida sindical activa.',
-        'La Constitución Política de los Estados Unidos Mexicanos reconoce, en sus **artículos 6.º y 7.º**, los derechos relacionados con la libertad de expresión y la difusión de ideas e información. Asimismo, el **artículo 9.º** protege el derecho de asociación y reunión pacífica para fines lícitos.',
+        'La Constitución Política de los Estados Unidos Mexicanos reconoce, en sus **artículos 6.º y 7.º**, los derechos relacionados con la libertad de expresión y la difusión de ideas e información.',
         'El Banobrino promueve el ejercicio responsable de estos derechos, mediante el intercambio respetuoso de ideas, el acceso a información de interés laboral y la participación voluntaria.',
         'Creemos que informarnos, dialogar y compartir propuestas contribuye a fortalecer nuestra vida laboral y sindical.',
       ],

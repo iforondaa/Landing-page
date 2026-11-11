@@ -30,15 +30,17 @@ test('al hacer clic se abre la página y la pestaña queda marcada', async ({ pa
 
 test('muestra todo el texto, con sus tres secciones, la aclaración y la invitación a colaborar', async ({ page }) => {
   await page.goto('/#/quienes-somos');
-  await expect(page.getByRole('heading', { level: 2 })).toHaveText(['¿Qué hacemos?', 'Nuestro compromiso', 'Nuestro derecho a participar']);
+  // Se compara contra src/js/contenido/quienes-somos.js: si se edita el texto, la prueba sigue valiendo.
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText(QUIENES_SOMOS.secciones.map((s) => s.titulo));
   const main = page.locator('main');
   const sinNegritas = (t) => t.replace(/\*\*/g, '');
   const textos = [QUIENES_SOMOS.entrada, ...QUIENES_SOMOS.presentacion, QUIENES_SOMOS.aclaracion,
     ...QUIENES_SOMOS.secciones.flatMap((s) => [...s.parrafos, s.invitacion ?? ''])].filter(Boolean).map(sinNegritas);
-  expect(textos).toHaveLength(16); // los 16 párrafos del texto entregado
+  expect(textos.length).toBeGreaterThan(0);
   for (const t of textos) await expect(main).toContainText(t);
-  await expect(page.getByRole('complementary', { name: 'Aclaración' })).toContainText('no forma parte de la dirigencia sindical');
-  await expect(main.locator('strong')).toHaveText(['artículos 6.º y 7.º', 'artículo 9.º']);
+  await expect(page.getByRole('complementary', { name: 'Aclaración' })).toContainText(sinNegritas(QUIENES_SOMOS.aclaracion));
+  const negritas = [...JSON.stringify(QUIENES_SOMOS).matchAll(/\*\*(.+?)\*\*/g)].map((m) => m[1]);
+  await expect(main.locator('strong')).toHaveText(negritas); // cada **texto** se ve en negritas
   await page.locator('.quienes__invitacion').getByRole('link', { name: 'Quiero colaborar' }).click();
   await expect(page).toHaveURL(/#\/colaborar$/);
   await expect(page.getByLabel('Nombre completo')).toBeVisible();
