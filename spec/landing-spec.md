@@ -154,3 +154,6 @@ Desarrollo de un sitio web de una sola página (Landing Page) enfocado en la lec
 - Nueva pestaña en el menú, entre «Publicaciones» y «Quiero colaborar», con el mismo estilo que «Publicaciones» («Quiero colaborar» conserva su botón). En celular, las dos pestañas de texto van en la primera fila y el botón abajo, a todo lo ancho.
 - Página `#/quienes-somos` con el texto entregado por el responsable, sin cambios: entrada, presentación, aclaración destacada («no forma parte de la dirigencia sindical…»), y las secciones «¿Qué hacemos?» (con invitación y botón a «Quiero colaborar»), «Nuestro compromiso» y «Nuestro derecho a participar» (artículos constitucionales en negritas).
 - El texto se edita en `src/js/contenido/quienes-somos.js`.
+
+### 8.7 Nuevo lema (2026-11-12)
+- El lema pasa a «Fortaleciendo nuestra comunidad sindical» (encabezado y pie). Se edita en `src/js/identidad.js` y su respaldo en `src/index.html`.

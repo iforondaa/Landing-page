@@ -16,7 +16,7 @@ export const publicaciones = [
     id: '7d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e5f',
     antetitulo: 'Consulta a las y los trabajadores sindicalizados de Banobras',
     titulo: 'El Sindicato visto por su base',
-    resumen: 'Resultados de la consulta aplicada del 10 de agosto al 17 de septiembre de 2026 (96 respuestas): más de la mitad siente al Sindicato ausente, pero casi nueve de cada diez quieren que intervenga y tres de cada cuatro están dispuestos a participar.',
+    resumen: 'Resultados de la consulta aplicada del 10 de agosto al 17 de septiembre de 2026 (96 respuestas): más de la mitad siente al Sindicato ausente, pero casi nueve de cada diez quieren que intervenga y tres de cada cuatro están dispuestos a participar. Un punto de partida para la nueva dirigencia sindical.',
     autor: 'Iván Foronda',
     fecha_publicacion: '2026-10-19T16:00:00.000Z', // 19 de octubre de 2026, 10:00 h (Ciudad de México)
     imagen_url: 'assets/img/consulta-portada.svg',
