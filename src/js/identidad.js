@@ -6,7 +6,7 @@
  */
 export const IDENTIDAD = Object.freeze({
   nombre: 'El Banobrino',
-  lema: 'Fortaleciendo nuestra comunidad sindical',
+  lema: 'Fortaleciendo nuestra comunidad sindical en Banobras',
 });
 
 export function aplicarIdentidad(doc = document) {

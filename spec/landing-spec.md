@@ -156,4 +156,4 @@ Desarrollo de un sitio web de una sola página (Landing Page) enfocado en la lec
 - El texto se edita en `src/js/contenido/quienes-somos.js`.
 
 ### 8.7 Nuevo lema (2026-11-12)
-- El lema pasa a «Fortaleciendo nuestra comunidad sindical» (encabezado y pie). Se edita en `src/js/identidad.js` y su respaldo en `src/index.html`.
+- El lema pasa a «Fortaleciendo nuestra comunidad sindical en Banobras» (encabezado y pie). Se edita en `src/js/identidad.js` y su respaldo en `src/index.html`.
