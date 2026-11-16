@@ -236,9 +236,13 @@ describe('createComentario / listComentarios', () => {
     expect(c.publicacion_id).toBe(PRINCIPAL.id);
   });
 
-  it('se muestra al instante: aparece en listComentarios, del más antiguo al más reciente', async () => {
+  it('revisión previa: el nuevo queda «pendiente» y solo aparece en listComentarios al aprobarlo, del más antiguo al más reciente', async () => {
     const a = await api.createComentario(PRINCIPAL.id, { contenido: 'Primero' });
     const b = await api.createComentario(PRINCIPAL.id, { contenido: 'Segundo' });
+    expect([a.estado, b.estado]).toEqual(['pendiente', 'pendiente']);
+    expect(await api.listComentarios(PRINCIPAL.id)).toEqual([]);
+    await api.moderarComentario(b.id, { estado: 'aprobado' });
+    await api.moderarComentario(a.id, { estado: 'aprobado' });
     const lista = await api.listComentarios(PRINCIPAL.id);
     lista.forEach((c) => cumple('comentario.schema.json', c));
     expect(lista.map((c) => c.id)).toEqual([a.id, b.id]);
@@ -294,31 +298,49 @@ describe('Fallos de almacenamiento → ALMACENAMIENTO (500)', () => {
   });
 });
 
-describe('Moderación de comentarios (contrato 2.1.0, adaptador local)', () => {
+describe('Revisión de comentarios (contrato 3.0.0, adaptador local)', () => {
   let storage; let api;
   beforeEach(() => {
     storage = new MemoryStorage();
     api = createLocalStorageAdapter({ storage, publicaciones });
   });
+  const publicos = async () => (await api.listComentarios(PRINCIPAL.id)).map((c) => c.id);
 
-  it('ocultar quita el comentario de la lista pública pero no de la de administración; mostrar lo devuelve', async () => {
+  it('aprobar publica; rechazar retira; se puede volver a aprobar', async () => {
     const a = await api.createComentario(PRINCIPAL.id, { contenido: 'Uno' });
     const b = await api.createComentario(PRINCIPAL.id, { contenido: 'Dos' });
-    const oculto = await api.moderarComentario(a.id, { oculto: true });
-    expect(oculto).toMatchObject({ id: a.id, oculto: true });
-    cumple('comentario.schema.json', oculto);
-    expect((await api.listComentarios(PRINCIPAL.id)).map((c) => c.id)).toEqual([b.id]);
+    const aprobado = await api.moderarComentario(a.id, { estado: 'aprobado' });
+    expect(aprobado).toMatchObject({ id: a.id, estado: 'aprobado' });
+    cumple('comentario.schema.json', aprobado);
+    expect(await publicos()).toEqual([a.id]);
     const admin = await api.listComentariosAdmin();
-    expect(admin.map((c) => [c.id, c.oculto])).toEqual(expect.arrayContaining([[a.id, true], [b.id, false]]));
+    expect(admin.map((c) => [c.id, c.estado])).toEqual(expect.arrayContaining([[a.id, 'aprobado'], [b.id, 'pendiente']]));
     admin.forEach((c) => cumple('comentario.schema.json', c));
-    await api.moderarComentario(a.id, { oculto: false });
-    expect((await api.listComentarios(PRINCIPAL.id)).map((c) => c.id)).toEqual([a.id, b.id]);
+    await api.moderarComentario(a.id, { estado: 'rechazado' });
+    expect(await publicos()).toEqual([]);
+    await api.moderarComentario(a.id, { estado: 'aprobado' });
+    expect(await publicos()).toEqual([a.id]);
   });
 
-  it('la lista pública nunca trae el campo `oculto`', async () => {
+  it('la lista pública nunca trae `estado` (ni el antiguo `oculto`)', async () => {
     const a = await api.createComentario(PRINCIPAL.id, { contenido: 'Uno' });
-    await api.moderarComentario(a.id, { oculto: false });
-    expect(Object.keys((await api.listComentarios(PRINCIPAL.id))[0])).not.toContain('oculto');
+    await api.moderarComentario(a.id, { estado: 'aprobado' });
+    const [c] = await api.listComentarios(PRINCIPAL.id);
+    expect(Object.keys(c)).not.toContain('estado');
+    expect(Object.keys(c)).not.toContain('oculto');
+  });
+
+  it('comentarios guardados antes de la revisión previa: visibles → aprobado, ocultos → rechazado', async () => {
+    storage.setItem(CLAVES.comentarios, JSON.stringify([
+      { id: '11111111-1111-4111-8111-111111111111', publicacion_id: PRINCIPAL.id, autor: 'A', contenido: 'Visible', fecha_creacion: '2026-10-01T00:00:00.000Z' },
+      { id: '22222222-2222-4222-8222-222222222222', publicacion_id: PRINCIPAL.id, autor: 'B', contenido: 'Oculto', fecha_creacion: '2026-10-02T00:00:00.000Z', oculto: true },
+    ]));
+    expect((await api.listComentarios(PRINCIPAL.id)).map((c) => c.contenido)).toEqual(['Visible']);
+    const admin = await api.listComentariosAdmin();
+    expect(admin.map((c) => [c.contenido, c.estado])).toEqual([['Oculto', 'rechazado'], ['Visible', 'aprobado']]);
+    admin.forEach((c) => cumple('comentario.schema.json', c));
+    await api.moderarComentario('22222222-2222-4222-8222-222222222222', { estado: 'aprobado' });
+    expect((await api.listComentarios(PRINCIPAL.id)).map((c) => c.contenido)).toEqual(['Visible', 'Oculto']);
   });
 
   it('borrar elimina el comentario; un id inexistente → NO_ENCONTRADO (404)', async () => {
@@ -326,13 +348,15 @@ describe('Moderación de comentarios (contrato 2.1.0, adaptador local)', () => {
     await expect(api.deleteComentario(a.id)).resolves.toBeUndefined();
     expect(await api.listComentariosAdmin()).toEqual([]);
     await rechazaCon(api.deleteComentario(a.id), 'NO_ENCONTRADO', 404);
-    await rechazaCon(api.moderarComentario(ID_INEXISTENTE, { oculto: true }), 'NO_ENCONTRADO', 404);
+    await rechazaCon(api.moderarComentario(ID_INEXISTENTE, { estado: 'aprobado' }), 'NO_ENCONTRADO', 404);
   });
 
   it('moderar con datos fuera del contrato → VALIDACION (400)', async () => {
     const a = await api.createComentario(PRINCIPAL.id, { contenido: 'Uno' });
-    await rechazaCon(api.moderarComentario(a.id, { oculto: 'sí' }), 'VALIDACION', 400);
+    await rechazaCon(api.moderarComentario(a.id, { estado: 'publicado' }), 'VALIDACION', 400);
+    await rechazaCon(api.moderarComentario(a.id, { estado: 'pendiente' }), 'VALIDACION', 400);
+    await rechazaCon(api.moderarComentario(a.id, { oculto: true }), 'VALIDACION', 400);
     await rechazaCon(api.moderarComentario(a.id, {}), 'VALIDACION', 400);
-    await rechazaCon(api.moderarComentario(a.id, { oculto: true, contenido: 'cambiado' }), 'VALIDACION', 400);
+    await rechazaCon(api.moderarComentario(a.id, { estado: 'aprobado', contenido: 'cambiado' }), 'VALIDACION', 400);
   });
 });

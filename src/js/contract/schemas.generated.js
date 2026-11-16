@@ -134,21 +134,25 @@ export const schemas = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "comentario.moderacion.schema.json",
     "title": "ModeracionComentario",
-    "description": "Cuerpo para ocultar o volver a mostrar un comentario (solo administración).",
+    "description": "Cuerpo para aprobar o rechazar un comentario (solo administración).",
     "type": "object",
     "additionalProperties": false,
     "required": [
-      "oculto"
+      "estado"
     ],
     "properties": {
-      "oculto": {
-        "type": "boolean",
-        "description": "`true` lo oculta al público; `false` lo vuelve a mostrar."
+      "estado": {
+        "type": "string",
+        "enum": [
+          "aprobado",
+          "rechazado"
+        ],
+        "description": "«aprobado» lo publica en la nota; «rechazado» lo retira (queda guardado y se puede aprobar después)."
       }
     },
     "examples": [
       {
-        "oculto": true
+        "estado": "aprobado"
       }
     ]
   },
@@ -156,7 +160,7 @@ export const schemas = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "comentario.schema.json",
     "title": "Comentario",
-    "description": "Comentario persistido al pie de una publicación. `id`, `fecha_creacion` y `oculto` los asigna la capa de persistencia.",
+    "description": "Comentario al pie de una publicación. `id`, `fecha_creacion` y `estado` los asigna la capa de persistencia. Todo comentario nuevo queda «pendiente» hasta que la administración lo revisa; el público solo ve los «aprobado».",
     "type": "object",
     "additionalProperties": false,
     "required": [
@@ -196,10 +200,14 @@ export const schemas = {
         "format": "date-time",
         "description": "Fecha y hora de creación (ISO 8601, UTC)."
       },
-      "oculto": {
-        "type": "boolean",
-        "default": false,
-        "description": "Solo en la vista de administración: `true` si quien administra lo ocultó. Los comentarios ocultos no se devuelven al público."
+      "estado": {
+        "type": "string",
+        "enum": [
+          "pendiente",
+          "aprobado",
+          "rechazado"
+        ],
+        "description": "Estado de revisión. Lo devuelven la creación (siempre «pendiente») y la vista de administración; la lista pública no lo incluye porque solo trae aprobados."
       }
     },
     "examples": [

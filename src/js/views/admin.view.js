@@ -69,21 +69,18 @@ function seccionColaboradores(colaboradores, modo) {
     anuncio);
 }
 
+const ETIQUETA_ESTADO = { pendiente: 'Pendiente', aprobado: 'Publicado', rechazado: 'Rechazado' };
+
+/**
+ * Revisión de comentarios (contrato 3.0.0): los nuevos llegan «pendientes» y solo se
+ * publican al aprobarlos. Los revisados se pueden volver a aprobar o rechazar, o borrar.
+ */
 function seccionModeracion({ api, comentarios, titulos, alExpirar }) {
   const anuncio = h('p', { class: 'visualmente-oculto', role: 'status', 'aria-live': 'polite' });
-  const resumen = h('p', { class: 'exportar__resumen' });
-  const lista = h('ul', { class: 'moderacion', 'aria-label': 'Comentarios para moderar' });
-  const vacio = h('div', { class: 'comentarios__vacio' }, 'Aún no hay comentarios en ninguna publicación.');
   const estado = new Map(comentarios.map((c) => [c.id, c]));
-
-  const actualizarResumen = () => {
-    const todos = [...estado.values()];
-    const ocultos = todos.filter((c) => c.oculto).length;
-    resumen.textContent = todos.length === 0
-      ? 'Aún no hay comentarios.'
-      : `${plural(todos.length, 'comentario', 'comentarios')}, del más reciente al más antiguo${ocultos ? ` · ${plural(ocultos, 'oculto', 'ocultos')} al público` : ''}.`;
-    vacio.hidden = todos.length > 0;
-  };
+  const contenedor = h('div', { class: 'admin__moderacion' });
+  const tituloPendientes = h('h2', { class: 'exportar__titulo', id: 'titulo-pendientes', tabindex: '-1' });
+  const tituloRevisados = h('h2', { class: 'exportar__titulo admin__subtitulo', id: 'titulo-revisados' }, 'Comentarios revisados');
 
   async function intentar(accion, error) {
     try {
@@ -98,83 +95,91 @@ function seccionModeracion({ api, comentarios, titulos, alExpirar }) {
     }
   }
 
+  /** Vuelve a dibujar ambas listas y pone el foco en `enfocar(id)` o en el título de pendientes. */
+  function pintar(enfocarId) {
+    const todos = [...estado.values()];
+    const pendientes = todos.filter((c) => c.estado === 'pendiente');
+    const revisados = todos.filter((c) => c.estado !== 'pendiente');
+    tituloPendientes.replaceChildren('Pendientes de revisión ', h('span', { class: 'admin__contador' }, `(${pendientes.length})`));
+    contenedor.replaceChildren(
+      h('section', { class: 'admin__seccion', 'aria-labelledby': 'titulo-pendientes' },
+        tituloPendientes,
+        h('p', { class: 'exportar__resumen' }, pendientes.length === 0
+          ? 'No hay comentarios por revisar.'
+          : 'Revisa cada comentario antes de publicarlo. Nadie más los ve mientras estén pendientes.'),
+        pendientes.length ? h('ul', { class: 'moderacion', 'aria-label': 'Comentarios pendientes de revisión' }, pendientes.map(item)) : null),
+      h('section', { class: 'admin__seccion', 'aria-labelledby': 'titulo-revisados' },
+        tituloRevisados,
+        revisados.length === 0
+          ? h('div', { class: 'comentarios__vacio' }, 'Aún no hay comentarios revisados.')
+          : [
+            h('p', { class: 'exportar__resumen' }, `${plural(revisados.length, 'comentario', 'comentarios')}, del más reciente al más antiguo.`),
+            h('ul', { class: 'moderacion', 'aria-label': 'Comentarios revisados' }, revisados.map(item)),
+          ]),
+      anuncio);
+    const destino = enfocarId ? contenedor.querySelector(`#moderar-${enfocarId} button`) : null;
+    if (enfocarId !== undefined) (destino ?? tituloPendientes).focus();
+  }
+
+  /** Tras una acción, el foco va al siguiente comentario de la misma lista (o al título). */
+  const siguienteDe = (id) => {
+    const lista = [...estado.values()].filter((c) => (c.estado === 'pendiente') === (estado.get(id)?.estado === 'pendiente'));
+    const i = lista.findIndex((c) => c.id === id);
+    return (lista[i + 1] ?? lista[i - 1])?.id ?? null;
+  };
+
   function item(c) {
     const error = h('p', { class: 'alerta', role: 'alert', hidden: true });
-    const etiquetaOculto = h('span', { class: 'etiqueta etiqueta--oculto' }, 'Oculto al público');
-    const botonVisibilidad = h('button', { class: 'boton boton--secundario boton--chico', type: 'button' });
-    const botonBorrar = h('button', { class: 'boton boton--secundario boton--chico boton--peligro', type: 'button' }, 'Borrar');
-    const confirmar = h('div', { class: 'moderacion__confirmar', hidden: true },
-      h('p', {}, '¿Borrar este comentario para siempre? No se puede deshacer.'));
+    const titulo = titulos.get(c.publicacion_id) ?? 'Publicación no disponible';
+    const boton = (texto, clase, accion) => h('button', {
+      class: `boton boton--chico ${clase}`, type: 'button', 'aria-label': `${texto} el comentario de ${c.autor}`, onClick: accion,
+    }, texto);
+
+    const cambiar = (nuevo) => async (e) => {
+      e.currentTarget.disabled = true;
+      error.hidden = true;
+      const siguiente = siguienteDe(c.id);
+      const ok = await intentar(async () => estado.set(c.id, await api.moderarComentario(c.id, { estado: nuevo })), error);
+      if (!ok) { e.currentTarget.disabled = false; return; }
+      anuncio.textContent = nuevo === 'aprobado' ? `Se publicó el comentario de ${c.autor}.` : `Se rechazó el comentario de ${c.autor}; ya no se ve en la nota.`;
+      pintar(siguiente);
+    };
+
+    const acciones = h('div', { class: 'moderacion__acciones' },
+      c.estado !== 'aprobado' ? boton('Aprobar', 'boton--aprobar', cambiar('aprobado')) : null,
+      c.estado !== 'rechazado' ? boton('Rechazar', 'boton--secundario', cambiar('rechazado')) : null,
+      boton('Borrar', 'boton--secundario boton--peligro', () => { acciones.hidden = true; confirmar.hidden = false; botonNo.focus(); }));
     const botonSi = h('button', { class: 'boton boton--chico boton--peligro-lleno', type: 'button' }, 'Sí, borrar');
     const botonNo = h('button', { class: 'boton boton--secundario boton--chico', type: 'button' }, 'Cancelar');
-    confirmar.append(h('div', { class: 'moderacion__acciones' }, botonSi, botonNo));
-    const acciones = h('div', { class: 'moderacion__acciones' }, botonVisibilidad, botonBorrar);
-    const titulo = titulos.get(c.publicacion_id) ?? 'Publicación no disponible';
+    const confirmar = h('div', { class: 'moderacion__confirmar', hidden: true },
+      h('p', {}, '¿Borrar este comentario para siempre? No se puede deshacer.'),
+      h('div', { class: 'moderacion__acciones' }, botonSi, botonNo));
+    botonNo.addEventListener('click', () => { confirmar.hidden = true; acciones.hidden = false; acciones.querySelector('button:last-child').focus(); });
+    botonSi.addEventListener('click', async () => {
+      botonSi.disabled = true;
+      error.hidden = true;
+      const siguiente = siguienteDe(c.id);
+      const ok = await intentar(() => api.deleteComentario(c.id), error);
+      botonSi.disabled = false;
+      if (!ok) return;
+      estado.delete(c.id);
+      anuncio.textContent = `Se borró el comentario de ${c.autor}.`;
+      pintar(siguiente);
+    });
 
-    const nodo = h('li', { class: 'moderacion__item', id: `moderar-${c.id}` },
+    return h('li', { class: `moderacion__item moderacion__item--${c.estado}`, id: `moderar-${c.id}` },
       h('article', { 'aria-label': `Comentario de ${c.autor}` },
         h('p', { class: 'moderacion__meta' },
           h('strong', {}, c.autor), ' · ',
           h('time', { datetime: c.fecha_creacion }, formatearFechaHora(c.fecha_creacion)), ' · en ',
           h('a', { href: `#/publicacion/${encodeURIComponent(c.publicacion_id)}` }, titulo)),
-        etiquetaOculto,
+        h('span', { class: `etiqueta etiqueta--${c.estado}` }, ETIQUETA_ESTADO[c.estado]),
         h('p', { class: 'comentario__contenido' }, c.contenido),
         acciones, confirmar, error));
-
-    const pintar = () => {
-      const actual = estado.get(c.id);
-      nodo.classList.toggle('moderacion__item--oculto', actual.oculto);
-      etiquetaOculto.hidden = !actual.oculto;
-      botonVisibilidad.textContent = actual.oculto ? 'Mostrar' : 'Ocultar';
-      botonVisibilidad.setAttribute('aria-label', `${actual.oculto ? 'Mostrar' : 'Ocultar'} el comentario de ${c.autor}`);
-      botonBorrar.setAttribute('aria-label', `Borrar el comentario de ${c.autor}`);
-    };
-    pintar();
-
-    botonVisibilidad.addEventListener('click', async () => {
-      error.hidden = true;
-      botonVisibilidad.disabled = true;
-      const oculto = !estado.get(c.id).oculto;
-      const ok = await intentar(async () => estado.set(c.id, await api.moderarComentario(c.id, { oculto })), error);
-      botonVisibilidad.disabled = false;
-      if (ok) {
-        pintar();
-        actualizarResumen();
-        anuncio.textContent = oculto ? `Se ocultó el comentario de ${c.autor}.` : `El comentario de ${c.autor} vuelve a ser visible.`;
-        botonVisibilidad.focus();
-      }
-    });
-    botonBorrar.addEventListener('click', () => {
-      acciones.hidden = true;
-      confirmar.hidden = false;
-      botonNo.focus();
-    });
-    botonNo.addEventListener('click', () => {
-      confirmar.hidden = true;
-      acciones.hidden = false;
-      botonBorrar.focus();
-    });
-    botonSi.addEventListener('click', async () => {
-      error.hidden = true;
-      botonSi.disabled = true;
-      const ok = await intentar(() => api.deleteComentario(c.id), error);
-      botonSi.disabled = false;
-      if (!ok) return;
-      const siguiente = nodo.nextElementSibling ?? nodo.previousElementSibling;
-      nodo.remove();
-      estado.delete(c.id);
-      actualizarResumen();
-      anuncio.textContent = `Se borró el comentario de ${c.autor}.`;
-      (siguiente?.querySelector('button') ?? resumen).focus?.();
-    });
-    return nodo;
   }
 
-  lista.append(...comentarios.map(item));
-  actualizarResumen();
-  return h('section', { class: 'admin__seccion', 'aria-labelledby': 'titulo-moderacion' },
-    h('h2', { class: 'exportar__titulo', id: 'titulo-moderacion' }, 'Comentarios'),
-    resumen, vacio, lista, anuncio);
+  pintar();
+  return contenedor;
 }
 
 function formularioAcceso({ sesion, aviso, alEntrar }) {
@@ -247,9 +252,19 @@ export async function vistaAdmin({ api, sesion }) {
           onClick: async () => { await sesion.cerrar(); mostrarAcceso(); },
         }, 'Cerrar sesión'))
       : null;
-    nodo.replaceChildren(...[barra,
+    const pendientes = comentarios.filter((c) => c.estado === 'pendiente').length;
+    const moderacion = seccionModeracion({ api, comentarios, titulos, alExpirar: expirar });
+    const avisoPendientes = pendientes
+      ? h('div', { class: 'admin__pendientes' },
+        h('p', {}, h('strong', {}, `Tienes ${plural(pendientes, 'comentario pendiente', 'comentarios pendientes')} de revisión.`)),
+        h('button', {
+          class: 'boton boton--chico', type: 'button',
+          onClick: () => { const t = moderacion.querySelector('#titulo-pendientes'); t?.focus(); t?.scrollIntoView({ block: 'start' }); },
+        }, 'Revisar ahora'))
+      : null;
+    nodo.replaceChildren(...[barra, avisoPendientes,
       seccionColaboradores(colaboradores, api.modo),
-      seccionModeracion({ api, comentarios, titulos, alExpirar: expirar })].filter(Boolean));
+      moderacion].filter(Boolean));
   }
 
   if (sesion.requiereContrasena && !sesion.activa()) mostrarAcceso();

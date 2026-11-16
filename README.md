@@ -89,7 +89,8 @@ Mientras `src/js/config.js` esté vacío, el sitio funciona en **modo prototipo*
 ### Mantenimiento
 - El plan gratuito de Supabase se pausa tras una semana sin uso. GitHub Actions hace una consulta automática los lunes y jueves (`.github/workflows/mantener-activo.yml`). Si aun así se pausa, en Supabase pulsa **Restore project**.
 - Para agregar a otra persona administradora: repite los pasos A5 y A6 con su correo.
-- Si alguien abusa de los comentarios, ocúltalos o bórralos desde `#/admin`.
+- **Revisión de comentarios:** todo comentario nuevo queda pendiente hasta que lo apruebas en `#/admin` (sección «Pendientes de revisión»). El sitio no avisa de comentarios nuevos: entra al panel de vez en cuando.
+- **Cuando cambie `supabase/esquema.sql`:** vuelve a pegarlo completo en Supabase → SQL Editor → Run. Se puede ejecutar las veces que haga falta y actualiza la base sin perder datos.
 
 ## Estado
 
@@ -108,3 +109,4 @@ Mientras `src/js/config.js` esté vacío, el sitio funciona en **modo prototipo*
 - [x] Cuentas de Supabase y Cloudflare creadas; `src/js/config.js` con los datos reales
 - [x] Sitio publicado en Cloudflare
 - [x] v2.1 — Pestaña «¿Quiénes somos?» (texto en `src/js/contenido/quienes-somos.js`)
+- [x] v3.0 — Revisión previa de comentarios (aprobar / rechazar / borrar)

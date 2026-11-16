@@ -92,7 +92,7 @@ test.describe('Sin aviso de privacidad (v1.4)', () => {
     await expect(page.getByRole('checkbox')).toHaveCount(0);
     await expect(page.getByRole('link', { name: /aviso de privacidad/i })).toHaveCount(0);
     await page.goto(`/#/publicacion/${ID}`);
-    await expect(page.getByRole('button', { name: 'Publicar comentario' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Enviar comentario' })).toBeVisible();
     await expect(page.getByRole('link', { name: /aviso de privacidad/i })).toHaveCount(0);
     await page.goto('/#/aviso-de-privacidad');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Página no encontrada');

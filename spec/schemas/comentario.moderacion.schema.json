@@ -2,21 +2,25 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "comentario.moderacion.schema.json",
   "title": "ModeracionComentario",
-  "description": "Cuerpo para ocultar o volver a mostrar un comentario (solo administración).",
+  "description": "Cuerpo para aprobar o rechazar un comentario (solo administración).",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "oculto"
+    "estado"
   ],
   "properties": {
-    "oculto": {
-      "type": "boolean",
-      "description": "`true` lo oculta al público; `false` lo vuelve a mostrar."
+    "estado": {
+      "type": "string",
+      "enum": [
+        "aprobado",
+        "rechazado"
+      ],
+      "description": "«aprobado» lo publica en la nota; «rechazado» lo retira (queda guardado y se puede aprobar después)."
     }
   },
   "examples": [
     {
-      "oculto": true
+      "estado": "aprobado"
     }
   ]
 }

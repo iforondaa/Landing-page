@@ -1,6 +1,6 @@
 /**
  * Adaptador de Supabase (V2): implementa las mismas operaciones que el
- * adaptador de LocalStorage (spec/openapi.yaml 2.1.0) usando la API REST de
+ * adaptador de LocalStorage (spec/openapi.yaml 3.0.0) usando la API REST de
  * Supabase (PostgREST). No necesita librerías: solo `fetch`.
  *
  * Seguridad: el navegador solo tiene la clave pública del proyecto. Lo que
@@ -101,10 +101,10 @@ export function createSupabaseAdapter({ url, clave, publicaciones, obtenerToken 
     listPublicaciones: async () => catalogo.listar(),
     getPublicacion: async (publicacionId) => catalogo.buscar(publicacionId),
 
-    /** Solo comentarios visibles; nunca usa la sesión de administración. */
+    /** Solo comentarios aprobados; nunca usa la sesión de administración. */
     async listComentarios(publicacionId) {
       catalogo.buscar(publicacionId);
-      const filas = await pedir(`/comentarios?select=${CAMPOS_COMENTARIO}&publicacion_id=eq.${enc(publicacionId)}&oculto=is.false&order=fecha_creacion.asc`);
+      const filas = await pedir(`/comentarios?select=${CAMPOS_COMENTARIO}&publicacion_id=eq.${enc(publicacionId)}&estado=eq.aprobado&order=fecha_creacion.asc`);
       return filas.map(comentario);
     },
 
@@ -112,8 +112,9 @@ export function createSupabaseAdapter({ url, clave, publicaciones, obtenerToken 
       catalogo.buscar(publicacionId);
       const datos = limpiarEntrada(entrada, OPCIONALES.comentario);
       comprobarEntrada('comentario.input.schema.json', datos);
-      const [fila] = await pedir(`/comentarios?select=${CAMPOS_COMENTARIO}`, {
-        metodo: 'POST', devolver: true,
+      // Por la función segura: el comentario queda «pendiente» y no se ve hasta aprobarlo.
+      const fila = await pedir('/rpc/publicar_comentario', {
+        metodo: 'POST',
         cuerpo: { publicacion_id: publicacionId, contenido: datos.contenido, ...(datos.autor && { autor: datos.autor }) },
       });
       return comentario(fila);
@@ -132,14 +133,14 @@ export function createSupabaseAdapter({ url, clave, publicaciones, obtenerToken 
     },
 
     async listComentariosAdmin() {
-      const filas = await pedir(`/comentarios?select=${CAMPOS_COMENTARIO},oculto&order=fecha_creacion.desc`, { admin: true });
+      const filas = await pedir(`/comentarios?select=${CAMPOS_COMENTARIO},estado&order=fecha_creacion.desc`, { admin: true });
       return filas.map(comentario);
     },
 
     async moderarComentario(comentarioId, cambios) {
       comprobarEntrada('comentario.moderacion.schema.json', cambios);
-      const filas = await pedir(`/comentarios?id=eq.${enc(comentarioId)}&select=${CAMPOS_COMENTARIO},oculto`, {
-        metodo: 'PATCH', admin: true, devolver: true, cuerpo: { oculto: cambios.oculto },
+      const filas = await pedir(`/comentarios?id=eq.${enc(comentarioId)}&select=${CAMPOS_COMENTARIO},estado`, {
+        metodo: 'PATCH', admin: true, devolver: true, cuerpo: { estado: cambios.estado },
       });
       if (!filas?.length) throw new ApiError('NO_ENCONTRADO', { mensaje: 'El comentario ya no existe.' });
       return comentario(filas[0]);

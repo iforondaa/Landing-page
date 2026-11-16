@@ -29,8 +29,21 @@ iniciar() {
   "$PG_BIN/pg_ctl" -D "$DIR/datos" -o "-p $PUERTO_PG -k $DIR -c listen_addresses=127.0.0.1" -l "$DIR/pg.log" -w start >/dev/null
   local PSQL=("$PG_BIN/psql" -h 127.0.0.1 -p "$PUERTO_PG" -U postgres -d postgres -v ON_ERROR_STOP=1 -q)
   "${PSQL[@]}" -f "$RAIZ/tests/integracion/supabase-simulado.sql"
+  # 1) Base como estaba en la versión 2.1, con un comentario visible y uno oculto…
+  "${PSQL[@]}" -f "$RAIZ/tests/integracion/esquema-v2.1.sql"
+  "${PSQL[@]}" -c "insert into public.comentarios (publicacion_id, autor, contenido, oculto) values
+    ('7d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e5f', 'Antes', 'Visible', false),
+    ('7d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e5f', 'Antes', 'Oculto', true);"
+  # 2) …se actualiza con el esquema vigente (dos veces: debe poder repetirse sin efectos).
   "${PSQL[@]}" -f "$RAIZ/supabase/esquema.sql"
-  "${PSQL[@]}" -f "$RAIZ/supabase/esquema.sql"   # debe poder ejecutarse dos veces
+  "${PSQL[@]}" -f "$RAIZ/supabase/esquema.sql"
+  # 3) La migración conserva los comentarios: visible → aprobado; oculto → rechazado.
+  local MIGRADOS
+  MIGRADOS="$("${PSQL[@]}" -tAc "select string_agg(contenido || '=' || estado || '/' || oculto, ',' order by contenido) from public.comentarios")"
+  if [ "$MIGRADOS" != "Oculto=rechazado/true,Visible=aprobado/false" ]; then
+    echo "La migración de comentarios falló: $MIGRADOS" >&2; exit 1
+  fi
+  "${PSQL[@]}" -c "truncate public.comentarios;"
   cat > "$DIR/postgrest.conf" <<CONF
 db-uri = "postgres://authenticator:authenticator@127.0.0.1:$PUERTO_PG/postgres"
 db-schemas = "public"

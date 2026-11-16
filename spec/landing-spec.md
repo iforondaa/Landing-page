@@ -157,3 +157,12 @@ Desarrollo de un sitio web de una sola página (Landing Page) enfocado en la lec
 
 ### 8.7 Nuevo lema (2026-11-12)
 - El lema pasa a «Fortaleciendo nuestra comunidad sindical en Banobras» (encabezado y pie). Se edita en `src/js/identidad.js` y su respaldo en `src/index.html`.
+
+### 8.8 Revisión previa de comentarios (v3.0 · 2026-11-16)
+Sustituye la decisión 8.1-3 («se publican al instante»), a petición del responsable, para verificar que no se falte el respeto a nadie.
+- **Quien comenta:** el comentario queda **pendiente**; ve «¡Gracias por tu comentario! Se publicará en esta página cuando sea revisado.». Arriba del formulario se avisa que los comentarios se revisan. El botón dice «Enviar comentario».
+- **Público:** solo ve comentarios **aprobados** (también si consulta la API directamente).
+- **Administración (`#/admin`):** aviso «Tienes N comentarios pendientes de revisión» con «Revisar ahora»; sección **Pendientes de revisión** (Aprobar · Rechazar · Borrar) y sección **Comentarios revisados** (Publicado/Rechazado; se puede cambiar de opinión o borrar).
+- **Comentarios anteriores:** los visibles pasan a «aprobado» y los ocultos a «rechazado».
+- **Escenario 3 (actualizado):** **GIVEN** un comentario enviado, **WHEN** quien administra lo aprueba, **THEN** aparece en la nota; si lo rechaza, no aparece (y puede aprobarlo después).
+- El sitio no envía avisos de comentarios nuevos: se revisan entrando al panel.

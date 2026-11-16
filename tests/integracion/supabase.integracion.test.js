@@ -85,7 +85,7 @@ describe.skipIf(!REST)('Supabase real (Postgres + PostgREST + supabase/esquema.s
       expect(r.status, JSON.stringify(cuerpo)).toBe(400);
     }
     for (const cuerpo of [{ publicacion_id: PRINCIPAL.id, contenido: '' }, { publicacion_id: PRINCIPAL.id, contenido: ' hola' }, { publicacion_id: PRINCIPAL.id, contenido: 'x'.repeat(2001) }, { publicacion_id: PRINCIPAL.id, autor: 'x'.repeat(121), contenido: 'hola' }]) {
-      const r = await directo('/comentarios', { metodo: 'POST', cuerpo });
+      const r = await directo('/rpc/publicar_comentario', { metodo: 'POST', cuerpo });
       expect(r.status, JSON.stringify(cuerpo).slice(0, 80)).toBe(400);
     }
     expect(sql('select count(*) from public.colaboradores') + sql('select count(*) from public.comentarios')).toBe('00');
@@ -96,46 +96,67 @@ describe.skipIf(!REST)('Supabase real (Postgres + PostgREST + supabase/esquema.s
     expect([...c.nombre_completo]).toHaveLength(120);
   });
 
-  it('Escenario 2: comentario sin nombre → «Anónimo», visible al instante y en orden cronológico', async () => {
+  /** Aprueba un comentario directamente en la base (como lo haría quien administra). */
+  const aprobarSQL = (id) => sql(`update public.comentarios set estado = 'aprobado' where id = '${id}'`);
+
+  it('Escenario 2 con revisión previa: «Anónimo», queda pendiente y solo se ve al aprobarlo, en orden cronológico', async () => {
     const a = await publico.createComentario(PRINCIPAL.id, { autor: '', contenido: 'Primero' });
     const b = await publico.createComentario(PRINCIPAL.id, { autor: 'María', contenido: 'Segundo' });
     cumple('comentario.schema.json', a);
-    expect(a.autor).toBe('Anónimo');
+    expect(a).toMatchObject({ autor: 'Anónimo', estado: 'pendiente' });
+    expect(await publico.listComentarios(PRINCIPAL.id)).toEqual([]);
+    expect(await (await directo('/comentarios?select=id')).json()).toEqual([]);   // ni pidiendo directo a la API
+    await admin.moderarComentario(b.id, { estado: 'aprobado' });
+    await admin.moderarComentario(a.id, { estado: 'aprobado' });
     expect((await publico.listComentarios(PRINCIPAL.id)).map((c) => c.id)).toEqual([a.id, b.id]);
   });
 
-  it('el público no puede crear comentarios ocultos, ni poner fecha o id, ni moderar o borrar', async () => {
+  it('el público no puede publicar sin revisión, ni poner estado, fecha o id, ni aprobar, cambiar o borrar', async () => {
     const c = await publico.createComentario(PRINCIPAL.id, { contenido: 'Hola' });
     for (const cuerpo of [
-      { publicacion_id: PRINCIPAL.id, contenido: 'x', oculto: true },
+      { publicacion_id: PRINCIPAL.id, contenido: 'x' },
+      { publicacion_id: PRINCIPAL.id, contenido: 'x', estado: 'aprobado' },
       { publicacion_id: PRINCIPAL.id, contenido: 'x', fecha_creacion: '2020-01-01T00:00:00Z' },
       { publicacion_id: PRINCIPAL.id, contenido: 'x', id: '33333333-3333-4333-8333-333333333333' },
-    ]) expect((await directo('/comentarios', { metodo: 'POST', cuerpo })).status).toBeGreaterThanOrEqual(401);
-    expect((await directo(`/comentarios?id=eq.${c.id}`, { metodo: 'PATCH', cuerpo: { oculto: true } })).status).toBeGreaterThanOrEqual(401);
+    ]) expect((await directo('/comentarios', { metodo: 'POST', cuerpo })).status, JSON.stringify(cuerpo)).toBeGreaterThanOrEqual(401);
+    expect((await directo('/rpc/publicar_comentario', { metodo: 'POST', cuerpo: { publicacion_id: PRINCIPAL.id, contenido: 'x', estado: 'aprobado' } })).status).toBeGreaterThanOrEqual(400);
+    expect((await directo(`/comentarios?id=eq.${c.id}`, { metodo: 'PATCH', cuerpo: { estado: 'aprobado' } })).status).toBeGreaterThanOrEqual(401);
     expect((await directo(`/comentarios?id=eq.${c.id}`, { metodo: 'PATCH', cuerpo: { contenido: 'cambiado' }, token: jwt(ADMIN_ID) })).status).toBeGreaterThanOrEqual(401); // ni admin cambia el texto
+    expect((await directo(`/comentarios?id=eq.${c.id}`, { metodo: 'PATCH', cuerpo: { estado: 'publicado' }, token: jwt(ADMIN_ID) })).status).toBe(400); // estado fuera de la lista
     expect((await directo(`/comentarios?id=eq.${c.id}`, { metodo: 'DELETE' })).status).toBeGreaterThanOrEqual(401);
-    await expect(otro.moderarComentario(c.id, { oculto: true })).rejects.toMatchObject({ codigo: 'NO_ENCONTRADO' }); // RLS: 0 filas
+    await expect(otro.moderarComentario(c.id, { estado: 'aprobado' })).rejects.toMatchObject({ codigo: 'NO_ENCONTRADO' }); // RLS: 0 filas
     await expect(otro.deleteComentario(c.id)).rejects.toMatchObject({ codigo: 'NO_ENCONTRADO' });
-    expect(sql(`select contenido || '|' || oculto from public.comentarios`)).toBe('Hola|false');
+    expect(sql(`select contenido || '|' || estado from public.comentarios`)).toBe('Hola|pendiente');
   });
 
-  it('administración: ocultar lo saca de la vista pública (incluso por la API), mostrar lo devuelve, borrar lo elimina', async () => {
+  it('administración: ve pendientes, aprueba (se publica), rechaza (se retira, también en la API), vuelve a aprobar y borra', async () => {
     const a = await publico.createComentario(PRINCIPAL.id, { contenido: 'Uno' });
     const b = await publico.createComentario(PRINCIPAL.id, { contenido: 'Dos' });
-    const oculto = await admin.moderarComentario(a.id, { oculto: true });
-    cumple('comentario.schema.json', oculto);
-    expect(oculto.oculto).toBe(true);
-    expect((await publico.listComentarios(PRINCIPAL.id)).map((c) => c.id)).toEqual([b.id]);
-    const crudo = await (await directo(`/comentarios?select=id,oculto`)).json();
-    expect(crudo.map((c) => c.id)).toEqual([b.id]);                  // ni pidiendo directo a la API
+    expect((await admin.listComentariosAdmin()).map((c) => [c.id, c.estado])).toEqual([[b.id, 'pendiente'], [a.id, 'pendiente']]);
+    const aprobado = await admin.moderarComentario(a.id, { estado: 'aprobado' });
+    cumple('comentario.schema.json', aprobado);
+    expect(aprobado.estado).toBe('aprobado');
+    expect((await publico.listComentarios(PRINCIPAL.id)).map((c) => c.id)).toEqual([a.id]);
+    await admin.moderarComentario(a.id, { estado: 'rechazado' });
+    expect(await publico.listComentarios(PRINCIPAL.id)).toEqual([]);
+    expect(await (await directo('/comentarios?select=id,estado')).json()).toEqual([]);
     const todos = await admin.listComentariosAdmin();
-    expect(todos.map((c) => [c.id, c.oculto])).toEqual([[b.id, false], [a.id, true]]);
+    expect(todos.map((c) => [c.id, c.estado])).toEqual([[b.id, 'pendiente'], [a.id, 'rechazado']]);
     todos.forEach((c) => cumple('comentario.schema.json', c));
-    await admin.moderarComentario(a.id, { oculto: false });
-    expect((await publico.listComentarios(PRINCIPAL.id))).toHaveLength(2);
+    await admin.moderarComentario(a.id, { estado: 'aprobado' });
+    expect(await publico.listComentarios(PRINCIPAL.id)).toHaveLength(1);
     await admin.deleteComentario(a.id);
     await expect(admin.deleteComentario(a.id)).rejects.toMatchObject({ codigo: 'NO_ENCONTRADO' });
     expect((await admin.listComentariosAdmin()).map((c) => c.id)).toEqual([b.id]);
+  });
+
+  it('compatibilidad: la columna «oculto» se calcula del estado (la versión anterior del sitio solo ve aprobados)', async () => {
+    const a = await publico.createComentario(PRINCIPAL.id, { contenido: 'Uno' });
+    expect(sql(`select oculto from public.comentarios where id = '${a.id}'`)).toBe('t');
+    aprobarSQL(a.id);
+    expect(sql(`select oculto from public.comentarios where id = '${a.id}'`)).toBe('f');
+    const viejo = await (await directo(`/comentarios?select=id&publicacion_id=eq.${PRINCIPAL.id}&oculto=is.false`)).json();
+    expect(viejo.map((c) => c.id)).toEqual([a.id]);
   });
 
   it('la tabla de administradores no es legible por la API', async () => {

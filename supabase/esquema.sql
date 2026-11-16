@@ -1,16 +1,18 @@
 -- =====================================================================
--- El Banobrino · Esquema de base de datos para Supabase (V2, contrato 2.1.0)
+-- El Banobrino · Esquema de base de datos para Supabase (contrato 3.0.0)
 --
 -- Cómo usarlo: en Supabase → SQL Editor → New query → pega TODO este
--- archivo → Run. Se puede volver a ejecutar sin perder datos.
+-- archivo → Run. Se puede volver a ejecutar sin perder datos, y actualiza
+-- una base creada con una versión anterior de este archivo (ver «Migración»).
 --
 -- Qué garantiza (aunque alguien manipule el navegador):
---   · El público puede: registrarse en «Quiero colaborar», publicar
---     comentarios y leer los comentarios visibles.
+--   · El público puede: registrarse en «Quiero colaborar», enviar
+--     comentarios (quedan PENDIENTES de revisión) y leer los APROBADOS.
 --   · El público NO puede: leer, cambiar ni borrar registros de
---     colaboradores; ocultar, cambiar ni borrar comentarios.
+--     colaboradores; ver comentarios pendientes o rechazados; aprobar,
+--     cambiar ni borrar comentarios.
 --   · Solo las cuentas listadas en public.administradores pueden ver los
---     registros, ver todos los comentarios, ocultarlos o borrarlos.
+--     registros, ver todos los comentarios, aprobarlos, rechazarlos o borrarlos.
 --   · Las reglas de longitud y formato del contrato (spec/schemas) se
 --     repiten aquí como restricciones CHECK.
 -- =====================================================================
@@ -42,13 +44,43 @@ create table if not exists public.comentarios (
   autor          text not null default 'Anónimo',
   contenido      text not null,
   fecha_creacion timestamptz not null default now(),
-  oculto         boolean not null default false,
+  -- Revisión previa: todo comentario nuevo queda «pendiente» hasta que la administración lo revisa.
+  estado         text not null default 'pendiente',
   constraint comentarios_autor check (char_length(autor) between 1 and 120 and btrim(autor) <> ''),
   constraint comentarios_contenido check (
     char_length(contenido) between 1 and 2000
-    and contenido ~ '^\S(.*\S)?$')
+    and contenido ~ '^\S(.*\S)?$'),
+  constraint comentarios_estado check (estado in ('pendiente', 'aprobado', 'rechazado'))
 );
+
+-- ---------- Migración: bases creadas antes de la revisión previa ----------
+-- Antes existía la columna «oculto» (visible / oculto). Se convierte a «estado»:
+-- visibles → aprobado; ocultos → rechazado. «oculto» se conserva calculada a partir
+-- de «estado» (true si no está aprobado) para que la versión anterior del sitio siga
+-- mostrando solo comentarios aprobados mientras se publica la nueva.
+do $$
+begin
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'comentarios' and column_name = 'oculto'
+               and is_generated = 'NEVER') then
+    alter table public.comentarios add column if not exists estado text;
+    update public.comentarios set estado = case when oculto then 'rechazado' else 'aprobado' end where estado is null;
+    alter table public.comentarios alter column estado set default 'pendiente', alter column estado set not null;
+    if not exists (select 1 from pg_constraint where conname = 'comentarios_estado') then
+      alter table public.comentarios add constraint comentarios_estado check (estado in ('pendiente', 'aprobado', 'rechazado'));
+    end if;
+    drop policy if exists comentarios_leer on public.comentarios;
+    drop policy if exists comentarios_publicar on public.comentarios;
+    alter table public.comentarios drop column oculto;
+  end if;
+  if not exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'comentarios' and column_name = 'oculto') then
+    alter table public.comentarios add column oculto boolean generated always as (estado <> 'aprobado') stored;
+  end if;
+end $$;
+
 create index if not exists comentarios_por_publicacion on public.comentarios (publicacion_id, fecha_creacion);
+create index if not exists comentarios_por_estado on public.comentarios (estado, fecha_creacion);
 
 -- Cuentas de Supabase Auth con permiso de administración.
 create table if not exists public.administradores (
@@ -91,21 +123,44 @@ as $$
   returning *;
 $$;
 
+-- ---------- Envío de comentarios (único camino de escritura del público) --
+-- Inserta el comentario como «pendiente» y devuelve lo que la página necesita.
+-- El público no puede elegir el estado, la fecha ni el id.
+
+create or replace function public.publicar_comentario(
+  publicacion_id uuid,
+  contenido      text,
+  autor          text default null
+)
+returns json
+language sql
+volatile
+security definer
+set search_path = ''
+as $$
+  insert into public.comentarios (publicacion_id, contenido, autor)
+  values (publicacion_id, contenido, coalesce(autor, 'Anónimo'))
+  returning json_build_object(
+    'id', id, 'publicacion_id', publicacion_id, 'autor', autor, 'contenido', contenido,
+    'fecha_creacion', fecha_creacion, 'estado', estado);
+$$;
+
 -- ---------- Permisos ------------------------------------------------------
 -- Supabase da permisos amplios por omisión; aquí se dejan solo los necesarios.
 
 revoke all on public.colaboradores, public.comentarios, public.administradores from anon, authenticated;
 revoke all on function public.registrar_colaborador(text, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.es_admin() from public, anon, authenticated;
+revoke all on function public.publicar_comentario(uuid, text, text) from public, anon, authenticated;
 
 grant execute on function public.registrar_colaborador(text, text, text, text, text) to anon, authenticated;
 grant execute on function public.es_admin() to anon, authenticated;
+grant execute on function public.publicar_comentario(uuid, text, text) to anon, authenticated;
 
 grant select on public.colaboradores to authenticated;                -- filtrado por RLS: solo admin
-grant select on public.comentarios to anon, authenticated;             -- filtrado por RLS: el público solo ve los visibles
+grant select on public.comentarios to anon, authenticated;             -- filtrado por RLS: el público solo ve los aprobados
 grant delete on public.comentarios to authenticated;                   -- filtrado por RLS: solo admin
-grant insert (publicacion_id, autor, contenido) on public.comentarios to anon, authenticated;
-grant update (oculto) on public.comentarios to authenticated;          -- filtrado por RLS: solo admin
+grant update (estado) on public.comentarios to authenticated;          -- filtrado por RLS: solo admin
 
 -- ---------- Seguridad por filas (RLS) -------------------------------------
 
@@ -119,11 +174,9 @@ create policy colaboradores_leer_admin on public.colaboradores
 
 drop policy if exists comentarios_leer on public.comentarios;
 create policy comentarios_leer on public.comentarios
-  for select to anon, authenticated using (not oculto or public.es_admin());
+  for select to anon, authenticated using (estado = 'aprobado' or public.es_admin());
 
-drop policy if exists comentarios_publicar on public.comentarios;
-create policy comentarios_publicar on public.comentarios
-  for insert to anon, authenticated with check (not oculto);
+drop policy if exists comentarios_publicar on public.comentarios;  -- el público ya no inserta directo (ver publicar_comentario)
 
 drop policy if exists comentarios_moderar on public.comentarios;
 create policy comentarios_moderar on public.comentarios

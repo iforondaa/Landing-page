@@ -42,8 +42,8 @@ test('con la política activa, todas las páginas funcionan sin bloqueos', async
   await expect(barra).toBeVisible();
   expect(await barra.evaluate((el) => el.getBoundingClientRect().width)).toBeGreaterThan(20); // el ancho viene de style="--valor"
   await page.getByRole('textbox', { name: 'Comentario', exact: true }).fill('Prueba con política');
-  await page.getByRole('button', { name: 'Publicar comentario' }).click();
-  await expect(page.getByText('Prueba con política')).toBeVisible();
+  await page.getByRole('button', { name: 'Enviar comentario' }).click();
+  await expect(page.getByText('¡Gracias por tu comentario!')).toBeVisible();
   await page.goto('/#/colaborar');
   await page.getByLabel('Nombre completo').fill('Ana López');
   await page.getByLabel('Correo electrónico').fill('ana@gmail.com');

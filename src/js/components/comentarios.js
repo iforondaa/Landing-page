@@ -3,7 +3,8 @@
  *
  * - Lista en orden cronológico (el más antiguo primero), como define el contrato.
  * - Nombre opcional: si se deja vacío, la capa de datos guarda "Anónimo".
- * - Al publicar, el comentario aparece al instante sin recargar.
+ * - Revisión previa (contrato 3.0.0): al enviarlo, el comentario queda pendiente y se avisa
+ *   que se publicará cuando sea revisado; la lista solo muestra comentarios aprobados.
  * - El texto de los usuarios siempre se inserta como texto (nunca como HTML).
  * - Sin atributo "maxlength": el navegador cuenta unidades UTF-16 (un emoji = 2) y cortaría
  *   antes que el contrato. El límite se valida con el esquema y el contador avisa en vivo.
@@ -92,7 +93,10 @@ export async function seccionComentarios({ api, publicacionId }) {
 
   const alerta = h('div', { class: 'alerta', role: 'alert', hidden: true });
   const anuncio = h('p', { class: 'visualmente-oculto', role: 'status', 'aria-live': 'polite' });
-  const boton = h('button', { class: 'boton', type: 'submit' }, 'Publicar comentario');
+  const boton = h('button', { class: 'boton', type: 'submit' }, 'Enviar comentario');
+  const gracias = h('div', { class: 'comentarios__gracias', tabindex: '-1', hidden: true },
+    h('p', { class: 'comentarios__gracias-titulo' }, '¡Gracias por tu comentario!'),
+    h('p', {}, 'Se publicará en esta página cuando sea revisado.'));
 
   const fmt = (n) => n.toLocaleString('es-MX');
   const actualizarContador = () => {
@@ -122,6 +126,8 @@ export async function seccionComentarios({ api, publicacionId }) {
   let enviando = false;
   const form = h('form', { class: 'formulario comentarios__form', novalidate: true, 'aria-labelledby': 'titulo-nuevo-comentario' },
     h('h3', { class: 'comentarios__subtitulo', id: 'titulo-nuevo-comentario' }, 'Deja un comentario'),
+    h('p', { class: 'comentarios__nota' }, 'Los comentarios se revisan antes de publicarse, para cuidar un diálogo respetuoso.'),
+    gracias,
     h('div', { class: 'formulario__rejilla formulario__rejilla--una' }, campoAutor.nodo, campoContenido.nodo),
     alerta,
     h('div', { class: 'formulario__acciones' }, boton),
@@ -131,6 +137,7 @@ export async function seccionComentarios({ api, publicacionId }) {
     e.preventDefault();
     if (enviando) return;
     alerta.hidden = true;
+    gracias.hidden = true;
     const datos = leer();
     const errores = erroresPorCampo(datos);
     for (const nombre of Object.keys(campos)) campos[nombre].pintar(errores[nombre]);
@@ -143,19 +150,16 @@ export async function seccionComentarios({ api, publicacionId }) {
     enviando = true;
     boton.disabled = true;
     boton.classList.add('boton--cargando');
-    boton.textContent = 'Publicando…';
+    boton.textContent = 'Enviando…';
     try {
-      const nuevo = await api.createComentario(publicacionId, datos);
-      const item = itemComentario(nuevo);
-      item.classList.add('comentario--nuevo');
-      lista.append(item);
-      total += 1;
-      actualizarConteo();
+      await api.createComentario(publicacionId, datos);
       form.reset();
       actualizarContador();
       Object.values(campos).forEach((c) => c.pintar(null));
-      anuncio.textContent = `Tu comentario se publicó como ${nuevo.autor}.`;
-      item.scrollIntoView({ block: 'nearest', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      gracias.hidden = false;
+      anuncio.textContent = 'Gracias por tu comentario. Se publicará cuando sea revisado.';
+      gracias.focus({ preventScroll: true });
+      gracias.scrollIntoView({ block: 'nearest', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     } catch (err) {
       console.error(err);
       const detalles = err instanceof ApiError && err.codigo === 'VALIDACION' ? (err.detalles ?? []).filter((d) => campos[d.campo]) : [];
@@ -163,14 +167,14 @@ export async function seccionComentarios({ api, publicacionId }) {
         detalles.forEach((d) => campos[d.campo].pintar(d.mensaje));
         controles[detalles[0].campo].focus();
       } else {
-        alerta.textContent = err instanceof ApiError ? err.message : 'No se pudo publicar tu comentario. Intenta de nuevo.';
+        alerta.textContent = err instanceof ApiError ? err.message : 'No se pudo enviar tu comentario. Intenta de nuevo.';
         alerta.hidden = false;
       }
     } finally {
       enviando = false;
       boton.disabled = false;
       boton.classList.remove('boton--cargando');
-      boton.textContent = 'Publicar comentario';
+      boton.textContent = 'Enviar comentario';
     }
   });
 

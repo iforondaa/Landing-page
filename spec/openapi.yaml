@@ -2,7 +2,7 @@ openapi: 3.1.0
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 info:
   title: Landing de Publicaciones y Colaboradores — Capa de datos
-  version: 2.1.0 # 2.1.0: V2 con Supabase: sesión de administración, moderación de comentarios y error 401 (compatible). 2.0.0: Publicacion con caratula/contenido (cuerpo pasa a opcional: cambio incompatible); Colaborador sin cambios respecto a 1.1.0. 1.1.0: comentario_propuesta y teléfono con guiones.
+  version: 3.0.0 # 3.0.0: revisión previa de comentarios: `oculto` se sustituye por `estado` (pendiente/aprobado/rechazado); moderarComentario recibe `estado` (cambio incompatible). 2.1.0: V2 con Supabase: sesión de administración, moderación de comentarios y error 401 (compatible). 2.0.0: Publicacion con caratula/contenido (cuerpo pasa a opcional: cambio incompatible); Colaborador sin cambios respecto a 1.1.0. 1.1.0: comentario_propuesta y teléfono con guiones.
   summary: Contrato de la capa de datos de la landing (V1 simulada con LocalStorage; V2 con Supabase).
   description: |
     Fuente única de verdad de las operaciones de datos de la landing.
@@ -11,7 +11,8 @@ info:
     sustituye por un backend HTTP real sin cambiar la interfaz.
     V2 (2.1.0): el adaptador de Supabase implementa las mismas operaciones; las
     reglas de seguridad de la base de datos (supabase/esquema.sql) hacen que el
-    público solo pueda registrarse, comentar y leer comentarios visibles.
+    público solo pueda registrarse, enviar comentarios (que quedan pendientes de revisión)
+    y leer comentarios aprobados.
 
     Reglas transversales:
     - `id` (UUID v4) y las marcas de tiempo (ISO 8601, UTC) las asigna la capa de datos.
@@ -83,7 +84,7 @@ paths:
       operationId: listComentarios
       tags: [Comentarios]
       summary: Listar comentarios de una publicación
-      description: Devuelve los comentarios en orden cronológico ascendente (el más antiguo primero).
+      description: Devuelve solo los comentarios aprobados, en orden cronológico ascendente (el más antiguo primero).
       responses:
         '200':
           description: Lista de comentarios (puede estar vacía).
@@ -101,7 +102,7 @@ paths:
       operationId: createComentario
       tags: [Comentarios]
       summary: Publicar un comentario
-      description: Guarda el comentario y lo devuelve listo para mostrarse al instante. Si `autor` se omite o queda vacío, se guarda "Anónimo" (Escenario BDD 2).
+      description: Guarda el comentario como «pendiente» de revisión y lo devuelve con `estado = pendiente`; no se publica hasta que la administración lo aprueba. Si `autor` se omite o queda vacío, se guarda "Anónimo" (Escenario BDD 2).
       requestBody:
         required: true
         content:
@@ -169,7 +170,7 @@ paths:
       operationId: listComentariosAdmin
       tags: [Administracion, Comentarios]
       summary: Listar todos los comentarios (moderación)
-      description: Devuelve todos los comentarios de todas las publicaciones, incluidos los ocultos, del más reciente al más antiguo. Cada uno trae `oculto`.
+      description: Devuelve todos los comentarios de todas las publicaciones, del más reciente al más antiguo, cada uno con su `estado` de revisión.
       security:
         - sesionAdmin: []
       responses:
@@ -191,8 +192,8 @@ paths:
     patch:
       operationId: moderarComentario
       tags: [Administracion, Comentarios]
-      summary: Ocultar o mostrar un comentario
-      description: Cambia la visibilidad pública de un comentario y lo devuelve actualizado.
+      summary: Aprobar o rechazar un comentario
+      description: Cambia el `estado` de revisión de un comentario («aprobado» lo publica; «rechazado» lo retira) y lo devuelve actualizado.
       security:
         - sesionAdmin: []
       requestBody:

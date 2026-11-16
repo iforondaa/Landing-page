@@ -71,14 +71,20 @@ test('Escenario 1 en real: el registro llega a la base de datos', async ({ page 
   expect(await page.evaluate(() => localStorage.getItem('landing.v1.colaboradores'))).toBeNull(); // nada se queda en el navegador
 });
 
-test('Escenario 2 en real: el comentario anónimo se guarda y otra persona lo ve', async ({ page }) => {
+test('Escenario 2 en real: el comentario anónimo llega pendiente y solo se ve al aprobarlo', async ({ page }) => {
   await page.goto(`/#/publicacion/${ID}`);
   await page.getByRole('textbox', { name: 'Comentario', exact: true }).fill('Muy buena nota');
-  await page.getByRole('button', { name: 'Publicar comentario' }).click();
+  await page.getByRole('button', { name: 'Enviar comentario' }).click();
+  await expect(page.getByText('¡Gracias por tu comentario!')).toBeVisible();
   const lista = page.getByRole('list', { name: 'Comentarios publicados' });
+  await expect(lista.getByRole('listitem')).toHaveCount(0);
+  expect(sql(`select autor || '|' || estado from public.comentarios`)).toBe('Anónimo|pendiente');
+  await page.reload();
+  await expect(lista.getByRole('listitem')).toHaveCount(0);                 // ni recargando
+  sql(`update public.comentarios set estado = 'aprobado'`);
+  await page.reload();
   await expect(lista.getByRole('listitem')).toHaveCount(1);
   await expect(lista).toContainText('Anónimo');
-  expect(sql('select autor from public.comentarios')).toBe('Anónimo');
 });
 
 test('administración: pide sesión; contraseña incorrecta o cuenta sin permiso no entran', async ({ page }) => {
@@ -94,9 +100,10 @@ test('administración: pide sesión; contraseña incorrecta o cuenta sin permiso
   expect(r.violations.map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
 });
 
-test('administración: ve registros y comentarios, oculta uno (desaparece de la nota) y cierra sesión', async ({ page }) => {
+test('administración: ve registros y pendientes, aprueba uno (se publica), rechaza otro y cierra sesión', async ({ page }) => {
   sql(`select public.registrar_colaborador('Ana López', 'ana@gmail.com');
-       insert into public.comentarios (publicacion_id, autor, contenido) values ('${ID}', 'María', 'Hola a todas'), ('${ID}', 'X', 'Comentario fuera de lugar');`);
+       select public.publicar_comentario('${ID}', 'Hola a todas', 'María');
+       select public.publicar_comentario('${ID}', 'Comentario fuera de lugar', 'X');`);
   await entrar(page);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Colaboradores registrados');
   await expect(page.getByText(`Sesión iniciada como ${ADMIN.email}.`)).toBeVisible();
@@ -104,9 +111,12 @@ test('administración: ve registros y comentarios, oculta uno (desaparece de la 
   await expect(page.locator('.tabla tbody tr')).toHaveCount(1);
   await expect(page.locator('.tabla')).toContainText('ana@gmail.com');
 
-  await page.getByRole('button', { name: 'Ocultar el comentario de X' }).click();
-  await expect(page.getByRole('button', { name: 'Mostrar el comentario de X' })).toBeVisible();
-  expect(sql('select oculto from public.comentarios where autor = \'X\'')).toBe('t');
+  await expect(page.getByText('Tienes 2 comentarios pendientes de revisión.')).toBeVisible();
+  await page.getByRole('button', { name: 'Aprobar el comentario de María' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Se publicó el comentario de María.' })).toHaveCount(1);
+  await page.getByRole('button', { name: 'Rechazar el comentario de X' }).click();
+  await expect(page.getByRole('button', { name: 'Aprobar el comentario de X' })).toBeVisible();
+  expect(sql(`select string_agg(autor || '=' || estado, ',' order by autor) from public.comentarios`)).toBe('María=aprobado,X=rechazado');
 
   await page.goto(`/#/publicacion/${ID}`);
   await expect(page.getByRole('list', { name: 'Comentarios publicados' }).getByRole('listitem')).toHaveCount(1);

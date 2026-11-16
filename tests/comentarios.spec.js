@@ -1,4 +1,4 @@
-/** Pruebas de aceptación de la vista de lectura y los comentarios (Tarea 2 · Escenario BDD 2). */
+/** Pruebas de aceptación de la vista de lectura y los comentarios (Tarea 2 · Escenario BDD 2; revisión previa, contrato 3.0.0). */
 import { test, expect } from './helpers/test-local.js';
 import AxeBuilder from '@axe-core/playwright';
 import { IDENTIDAD } from '../src/js/identidad.js';
@@ -7,7 +7,12 @@ const PRINCIPAL = '7d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d4e5f';
 const OTRA = 'b4c5d6e7-f809-4a1b-9c2d-3e4f5a6b7c8d'; // id de otra publicación (no existe en la semilla actual)
 const CLAVE = 'landing.v1.comentarios';
 const leer = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? '[]'), CLAVE);
-const publicar = (page) => page.getByRole('button', { name: 'Publicar comentario' }).click();
+const publicar = (page) => page.getByRole('button', { name: 'Enviar comentario' }).click();
+/** Simula que la administración aprueba todos los comentarios guardados y recarga la nota. */
+async function aprobarTodos(page) {
+  await page.evaluate((k) => localStorage.setItem(k, JSON.stringify(JSON.parse(localStorage.getItem(k) ?? '[]').map((c) => ({ ...c, estado: 'aprobado' })))), CLAVE);
+  await page.reload();
+}
 const lista = (page) => page.getByRole('list', { name: 'Comentarios publicados' }).getByRole('listitem');
 
 test.describe('Vista de lectura', () => {
@@ -36,42 +41,66 @@ test.describe('Vista de lectura', () => {
 test.describe('Comentarios', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(`/#/publicacion/${PRINCIPAL}`);
-    await expect(page.getByRole('button', { name: 'Publicar comentario' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Enviar comentario' })).toBeVisible();
   });
 
-  test('Escenario 2: comentario sin nombre se publica al instante como "Anónimo"', async ({ page }) => {
+  test('Escenario 2 con revisión previa: el comentario sin nombre queda pendiente como "Anónimo" y se ve al aprobarlo', async ({ page }) => {
     // GIVEN el lector está en el detalle de la nota
     await expect(page.getByText('Aún no hay comentarios.')).toBeVisible();
-    // WHEN escribe un comentario dejando el nombre vacío y publica
+    await expect(page.getByText('Los comentarios se revisan antes de publicarse')).toBeVisible();
+    // WHEN escribe un comentario dejando el nombre vacío y lo envía
     await page.getByRole('textbox', { name: 'Comentario', exact: true }).fill('Excelente nota, muy clara.');
     await publicar(page);
-    // THEN se guarda…
+    // THEN se guarda como pendiente…
     const [guardado, ...resto] = await leer(page);
     expect(resto).toHaveLength(0);
-    expect(guardado).toMatchObject({ publicacion_id: PRINCIPAL, autor: 'Anónimo', contenido: 'Excelente nota, muy clara.' });
-    // …y se muestra con autor "Anónimo", sin recargar
+    expect(guardado).toMatchObject({ publicacion_id: PRINCIPAL, autor: 'Anónimo', contenido: 'Excelente nota, muy clara.', estado: 'pendiente' });
+    // …se agradece y se explica que se publicará al revisarlo, sin mostrarlo todavía
+    await expect(page.getByText('¡Gracias por tu comentario!')).toBeVisible();
+    await expect(page.getByText('Se publicará en esta página cuando sea revisado.')).toBeVisible();
+    await expect(page.locator('.comentarios__gracias')).toBeFocused();
+    await expect(page.getByRole('status').filter({ hasText: 'Gracias por tu comentario. Se publicará cuando sea revisado.' })).toHaveCount(1);
+    await expect(lista(page)).toHaveCount(0);
+    await expect(page.getByText('Aún no hay comentarios.')).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Comentario', exact: true })).toHaveValue('');
+    // AND cuando la administración lo aprueba, aparece con autor "Anónimo"
+    await aprobarTodos(page);
     await expect(lista(page)).toHaveCount(1);
     await expect(lista(page).first()).toContainText('Anónimo');
     await expect(lista(page).first()).toContainText('Excelente nota, muy clara.');
-    await expect(page.getByText('Aún no hay comentarios.')).toBeHidden();
-    await expect(page.getByRole('heading', { name: /Comentarios/ , level: 2 })).toContainText('(1)');
-    await expect(page.getByRole('status').filter({ hasText: 'Tu comentario se publicó como Anónimo.' })).toHaveCount(1);
-    await expect(page.getByRole('textbox', { name: 'Comentario', exact: true })).toHaveValue('');
+    await expect(page.getByRole('heading', { name: /Comentarios/, level: 2 })).toContainText('(1)');
   });
 
-  test('con nombre: se muestra el nombre; orden del más antiguo al más reciente; persiste al recargar', async ({ page }) => {
+  test('pendientes y rechazados no se ven; aprobados sí, del más antiguo al más reciente', async ({ page }) => {
     await page.getByLabel('Tu nombre').fill('María Pérez');
     await page.getByRole('textbox', { name: 'Comentario', exact: true }).fill('Primero');
     await publicar(page);
+    await expect(page.getByText('¡Gracias por tu comentario!')).toBeVisible();
     await page.getByRole('textbox', { name: 'Comentario', exact: true }).fill('Segundo');
     await publicar(page);
+    await page.getByRole('textbox', { name: 'Comentario', exact: true }).fill('Rechazado');
+    await publicar(page);
+    await page.evaluate((k) => {
+      const todos = JSON.parse(localStorage.getItem(k));
+      localStorage.setItem(k, JSON.stringify(todos.map((c) => ({ ...c, estado: c.contenido === 'Rechazado' ? 'rechazado' : 'aprobado' }))));
+    }, CLAVE);
+    await page.reload();
     await expect(lista(page)).toHaveCount(2);
     await expect(lista(page).nth(0)).toContainText('María Pérez');
     await expect(lista(page).nth(0)).toContainText('Primero');
     await expect(lista(page).nth(1)).toContainText('Anónimo');
-    await page.reload();
-    await expect(lista(page)).toHaveCount(2);
     await expect(lista(page).nth(1)).toContainText('Segundo');
+    await expect(page.getByText('Rechazado', { exact: true })).toHaveCount(0);
+  });
+
+  test('comentarios guardados antes de la revisión previa siguen visibles (y los ocultos, ocultos)', async ({ page }) => {
+    await page.evaluate(([k, id]) => localStorage.setItem(k, JSON.stringify([
+      { id: '11111111-1111-4111-8111-111111111111', publicacion_id: id, autor: 'A', contenido: 'Visible de antes', fecha_creacion: '2026-10-01T00:00:00.000Z' },
+      { id: '22222222-2222-4222-8222-222222222222', publicacion_id: id, autor: 'B', contenido: 'Oculto de antes', fecha_creacion: '2026-10-02T00:00:00.000Z', oculto: true },
+    ])), [CLAVE, PRINCIPAL]);
+    await page.reload();
+    await expect(lista(page)).toHaveCount(1);
+    await expect(lista(page).first()).toContainText('Visible de antes');
   });
 
   test('comentario vacío o solo espacios no se publica', async ({ page }) => {
@@ -103,6 +132,8 @@ test.describe('Comentarios', () => {
     expect([...(await campo.inputValue())].length).toBe(2000); // el navegador no lo recorta a 1,000
     await expect(page.locator('#comentario-contenido-contador')).toHaveText('2,000 / 2,000 caracteres');
     await publicar(page);
+    await expect(page.getByText('¡Gracias por tu comentario!')).toBeVisible();
+    await aprobarTodos(page);
     await expect(lista(page)).toHaveCount(1);
   });
 
@@ -126,6 +157,8 @@ test.describe('Comentarios', () => {
     await page.getByLabel('Tu nombre').fill('😀Ana');
     await page.getByRole('textbox', { name: 'Comentario', exact: true }).fill('Hola');
     await publicar(page);
+    await expect(page.getByText('¡Gracias por tu comentario!')).toBeVisible();
+    await aprobarTodos(page);
     await expect(lista(page).first().locator('.comentario__avatar')).toHaveText('😀');
   });
 
@@ -136,6 +169,8 @@ test.describe('Comentarios', () => {
     await page.getByLabel('Tu nombre').fill('<script>alert(2)</script>');
     await page.getByRole('textbox', { name: 'Comentario', exact: true }).fill(ataque);
     await publicar(page);
+    await expect(page.getByText('¡Gracias por tu comentario!')).toBeVisible();
+    await aprobarTodos(page);
     await expect(lista(page).first()).toContainText(ataque);
     await expect(lista(page).first().locator('img, b, script')).toHaveCount(0);
     await page.reload();
@@ -147,6 +182,8 @@ test.describe('Comentarios', () => {
     await page.getByLabel('Tu nombre').fill('N'.repeat(120));
     await page.getByRole('textbox', { name: 'Comentario', exact: true }).fill(`https://ejemplo.mx/${'a'.repeat(300)}`);
     await publicar(page);
+    await expect(page.getByText('¡Gracias por tu comentario!')).toBeVisible();
+    await aprobarTodos(page);
     await expect(lista(page)).toHaveCount(1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
   });
@@ -154,6 +191,8 @@ test.describe('Comentarios', () => {
   test('conserva los saltos de línea del comentario', async ({ page }) => {
     await page.getByRole('textbox', { name: 'Comentario', exact: true }).fill('Línea 1\n\nLínea 2');
     await publicar(page);
+    await expect(page.getByText('¡Gracias por tu comentario!')).toBeVisible();
+    await aprobarTodos(page);
     const texto = await lista(page).first().locator('.comentario__contenido').innerText();
     expect(texto).toBe('Línea 1\n\nLínea 2');
   });
@@ -161,7 +200,7 @@ test.describe('Comentarios', () => {
   test('los comentarios son de cada publicación', async ({ page }) => {
     // Un comentario guardado para otra publicación no debe aparecer en esta.
     await page.evaluate(([k, otra]) => localStorage.setItem(k, JSON.stringify([{
-      id: '11111111-1111-4111-8111-111111111111', publicacion_id: otra, autor: 'X', contenido: 'De otra nota', fecha_creacion: '2026-10-01T00:00:00.000Z',
+      id: '11111111-1111-4111-8111-111111111111', publicacion_id: otra, autor: 'X', contenido: 'De otra nota', fecha_creacion: '2026-10-01T00:00:00.000Z', estado: 'aprobado',
     }])), [CLAVE, OTRA]);
     await page.reload();
     await expect(page.getByText('Aún no hay comentarios.')).toBeVisible();
@@ -187,7 +226,12 @@ test.describe('Comentarios', () => {
   test('sin violaciones de accesibilidad (con comentarios y con error)', async ({ page }) => {
     await page.getByRole('textbox', { name: 'Comentario', exact: true }).fill('Comentario de prueba');
     await publicar(page);
-    await publicar(page); // vacío → muestra error
+    await aprobarTodos(page);
+    await expect(lista(page)).toHaveCount(1);
+    await page.getByRole('textbox', { name: 'Comentario', exact: true }).fill('Otro comentario');
+    await publicar(page);
+    await expect(page.getByText('¡Gracias por tu comentario!')).toBeVisible(); // con el agradecimiento visible…
+    await publicar(page); // …y vacío → muestra error
     const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
     expect(r.violations.map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
   });

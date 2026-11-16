@@ -20,8 +20,14 @@ export const CLAVES = Object.freeze({
   comentarios: 'landing.v1.comentarios',
 });
 
-/** Campos públicos de un comentario (sin `oculto`). */
-const publico = ({ oculto, ...c }) => c;
+/** Campos públicos de un comentario (sin `estado` ni el antiguo `oculto`). */
+const publico = ({ oculto, estado, ...c }) => c;
+
+/**
+ * Estado de revisión de un comentario guardado (contrato 3.0.0). Los registros
+ * anteriores a la revisión previa no tienen `estado`: visibles → aprobado; ocultos → rechazado.
+ */
+export const estadoDe = (c) => c.estado ?? (c.oculto ? 'rechazado' : 'aprobado');
 
 /**
  * @param {object} opciones
@@ -83,16 +89,16 @@ export function createLocalStorageAdapter({
     /** GET /publicaciones/{publicacion_id} */
     getPublicacion: operacion((publicacionId) => catalogo.buscar(publicacionId)),
 
-    /** GET /publicaciones/{publicacion_id}/comentarios — visibles, el más antiguo primero. */
+    /** GET /publicaciones/{publicacion_id}/comentarios — solo aprobados, el más antiguo primero. */
     listComentarios: operacion((publicacionId) => {
       catalogo.buscar(publicacionId);
       return leer(CLAVES.comentarios)
-        .filter((c) => c.publicacion_id === publicacionId && !c.oculto)
+        .filter((c) => c.publicacion_id === publicacionId && estadoDe(c) === 'aprobado')
         .sort(porFecha('fecha_creacion', 1))
         .map(publico);
     }),
 
-    /** POST /publicaciones/{publicacion_id}/comentarios — autor vacío → "Anónimo". */
+    /** POST /publicaciones/{publicacion_id}/comentarios — autor vacío → "Anónimo"; queda pendiente de revisión. */
     createComentario: operacion((publicacionId, entrada) => {
       catalogo.buscar(publicacionId);
       const datos = limpiarEntrada(entrada, OPCIONALES.comentario);
@@ -103,6 +109,7 @@ export function createLocalStorageAdapter({
         autor: datos.autor ?? AUTOR_ANONIMO,
         contenido: datos.contenido,
         fecha_creacion: ahora().toISOString(),
+        estado: 'pendiente',
       };
       comprobarSalida('comentario.schema.json', comentario);
       const todos = leer(CLAVES.comentarios);
@@ -126,9 +133,9 @@ export function createLocalStorageAdapter({
       return colaborador;
     }),
 
-    /** GET /admin/comentarios — todos, incluidos los ocultos, del más reciente al más antiguo. */
+    /** GET /admin/comentarios — todos, con su estado de revisión, del más reciente al más antiguo. */
     listComentariosAdmin: operacion(() => leer(CLAVES.comentarios)
-      .map((c) => ({ ...c, oculto: c.oculto === true }))
+      .map(({ oculto, ...c }) => ({ ...c, estado: estadoDe({ oculto, ...c }) }))
       .sort(porFecha('fecha_creacion', -1))),
 
     /** PATCH /admin/comentarios/{comentario_id} */
@@ -136,7 +143,8 @@ export function createLocalStorageAdapter({
       comprobarEntrada('comentario.moderacion.schema.json', cambios);
       const todos = leer(CLAVES.comentarios);
       const i = indiceComentario(todos, comentarioId);
-      todos[i] = { ...todos[i], oculto: cambios.oculto };
+      const { oculto, ...actual } = todos[i];
+      todos[i] = { ...actual, estado: cambios.estado };
       escribir(CLAVES.comentarios, todos);
       return todos[i];
     }),

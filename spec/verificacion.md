@@ -149,3 +149,13 @@ Pruebas nuevas o ajustadas: `nota.spec.js` (destacado «17 de 96», prioridad de
 ## 7. Condiciones para producción (V2)
 
 ✅ Backend con base de datos (Supabase, adaptador con la misma interfaz) y autenticación del lado del servidor para la consulta y la descarga (V2). Pendiente por decisión del responsable: aviso de privacidad (borrador en `spec/borradores/`). Al cambiar el contrato, aplicar oasdiff/Delimit para detectar cambios incompatibles (Fase 2 de la guía SDD).
+
+## 6.4 Verificación de la revisión previa de comentarios (2026-11-16)
+
+| Verificación | Resultado |
+|---|---|
+| Lint del contrato (`openapi.yaml` 3.0.0) y sincronía de esquemas | ✅ |
+| Pruebas unitarias y de contrato (adaptador local y de Supabase) | ✅ 2,977 |
+| Aceptación en navegador (escritorio + móvil): quien comenta, panel de revisión, encabezados de seguridad | ✅ 137 |
+| `supabase/esquema.sql`: sintaxis revisada con el analizador de Postgres | ✅ |
+| Integración con Postgres + PostgREST (reglas RLS, función `publicar_comentario`, migración desde 2.1) | ⏳ Corre en GitHub Actions (trabajo «Reglas de seguridad de Supabase») |

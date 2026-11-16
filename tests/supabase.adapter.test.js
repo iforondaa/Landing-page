@@ -33,7 +33,7 @@ const COMENTARIO = { id: '9a1b2c3d-4e5f-4a6b-8c7d-0e1f2a3b4c5d', publicacion_id:
 const COLABORADOR = { id: '3f6c2a1e-8b4d-4c2a-9e1f-5a7b8c9d0e1f', nombre_completo: 'Ana López', email: 'ana@gmail.com', telefono: null, area_adscripcion: null, comentario_propuesta: null, fecha_registro: '2026-10-17T18:00:00+00:00' };
 
 describe('Adaptador de Supabase', () => {
-  it('lee comentarios visibles con la clave pública y sin sesión; normaliza la fecha a UTC', async () => {
+  it('lee solo comentarios aprobados con la clave pública y sin sesión; normaliza la fecha a UTC', async () => {
     const { f, llamadas } = falsoFetch(() => respuesta(200, [COMENTARIO]));
     const api = createSupabaseAdapter({ url: `${URL_P}/`, clave: 'sb_publishable_abc', publicaciones, fetch: f, obtenerToken: async () => 'token-admin' });
     const lista = await api.listComentarios(PRINCIPAL.id);
@@ -42,8 +42,8 @@ describe('Adaptador de Supabase', () => {
     const [l] = llamadas;
     expect(l.ruta).toBe('/rest/v1/comentarios');
     expect(l.query.get('publicacion_id')).toBe(`eq.${PRINCIPAL.id}`);
-    expect(l.query.get('oculto')).toBe('is.false');          // nunca ocultos al público…
-    expect(l.query.get('select')).not.toContain('oculto');
+    expect(l.query.get('estado')).toBe('eq.aprobado');       // nunca pendientes ni rechazados al público…
+    expect(l.query.get('select')).not.toContain('estado');
     expect(l.headers.apikey).toBe('sb_publishable_abc');
     expect(l.headers.Authorization).toBeUndefined();          // …aunque haya sesión de admin abierta
   });
@@ -55,15 +55,15 @@ describe('Adaptador de Supabase', () => {
     expect(llamadas[0].headers.Authorization).toBe('Bearer eyJhbGciOi.anon.clave');
   });
 
-  it('publicar comentario: recorta, omite autor vacío (la base pone «Anónimo») y devuelve el creado', async () => {
-    const { f, llamadas } = falsoFetch(() => respuesta(201, [COMENTARIO]));
+  it('enviar comentario: usa la función segura, recorta, omite autor vacío y lo devuelve «pendiente»', async () => {
+    const { f, llamadas } = falsoFetch(() => respuesta(200, { ...COMENTARIO, estado: 'pendiente' }));
     const api = createSupabaseAdapter({ url: URL_P, clave: 'k', publicaciones, fetch: f });
     const c = await api.createComentario(PRINCIPAL.id, { autor: '   ', contenido: '  Hola  ' });
-    expect(c.autor).toBe('Anónimo');
+    expect(c).toMatchObject({ autor: 'Anónimo', estado: 'pendiente' });
+    cumple('comentario.schema.json', c);
     const [l] = llamadas;
-    expect([l.metodo, l.ruta]).toEqual(['POST', '/rest/v1/comentarios']);
+    expect([l.metodo, l.ruta]).toEqual(['POST', '/rest/v1/rpc/publicar_comentario']);
     expect(l.cuerpo).toEqual({ publicacion_id: PRINCIPAL.id, contenido: 'Hola' });
-    expect(l.headers.Prefer).toBe('return=representation');
   });
 
   it('valida antes de enviar: datos inválidos no llegan al servidor', async () => {
@@ -89,7 +89,7 @@ describe('Adaptador de Supabase', () => {
     const { f, llamadas } = falsoFetch(() => respuesta(200, [COLABORADOR]));
     let token = null;
     const api = createSupabaseAdapter({ url: URL_P, clave: 'k', publicaciones, fetch: f, obtenerToken: async () => token });
-    for (const op of [() => api.listColaboradores(), () => api.listComentariosAdmin(), () => api.moderarComentario(COMENTARIO.id, { oculto: true }), () => api.deleteComentario(COMENTARIO.id)]) {
+    for (const op of [() => api.listColaboradores(), () => api.listComentariosAdmin(), () => api.moderarComentario(COMENTARIO.id, { estado: 'aprobado' }), () => api.deleteComentario(COMENTARIO.id)]) {
       await expect(op()).rejects.toMatchObject({ codigo: 'NO_AUTORIZADO', status: 401 });
     }
     expect(llamadas).toHaveLength(0);
@@ -100,10 +100,10 @@ describe('Adaptador de Supabase', () => {
   });
 
   it('moderar y borrar: 0 filas afectadas → NO_ENCONTRADO', async () => {
-    const { f, llamadas } = falsoFetch((l) => respuesta(200, l.metodo === 'PATCH' ? [{ ...COMENTARIO, oculto: true }] : []));
+    const { f, llamadas } = falsoFetch((l) => respuesta(200, l.metodo === 'PATCH' ? [{ ...COMENTARIO, estado: 'rechazado' }] : []));
     const api = createSupabaseAdapter({ url: URL_P, clave: 'k', publicaciones, fetch: f, obtenerToken: async () => 't' });
-    expect(await api.moderarComentario(COMENTARIO.id, { oculto: true })).toMatchObject({ oculto: true });
-    expect(llamadas[0].cuerpo).toEqual({ oculto: true });
+    expect(await api.moderarComentario(COMENTARIO.id, { estado: 'rechazado' })).toMatchObject({ estado: 'rechazado' });
+    expect(llamadas[0].cuerpo).toEqual({ estado: 'rechazado' });
     expect(llamadas[0].query.get('id')).toBe(`eq.${COMENTARIO.id}`);
     await expect(api.deleteComentario(COMENTARIO.id)).rejects.toMatchObject({ codigo: 'NO_ENCONTRADO' });
   });
